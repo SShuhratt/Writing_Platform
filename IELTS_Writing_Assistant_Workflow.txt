@@ -1,0 +1,104 @@
+================================================================================
+IELTS WRITING ASSISTANT PLATFORM: REFINED WORKFLOW & BUSINESS LOGIC
+================================================================================
+
+1. EXECUTIVE OVERVIEW
+--------------------------------------------------------------------------------
+The IELTS Writing Assistant Platform provides an adaptive, real-time writing environment designed to guide test-takers toward their Target Band Score (5.0–9.0). Unlike traditional post-submission essay checkers, this platform acts as a real-time Socratic mentor during drafting and an official-grade IELTS examiner upon submission.
+
+Key Differentiators:
+- Adaptive real-time guidance grounded strictly in the selected Target Band Score.
+- Socratic feedback model: Identifies structural, logical, and lexical gaps WITHOUT providing copy-paste sentences or direct answers.
+- Dynamic recalibration allowing mid-task band score adjustments.
+- Dual-layer post-submission reporting (Objective Band Evaluation + Target Alignment Report).
+
+
+================================================================================
+2. PHASE 1: TASK SETUP & CONFIGURATION
+================================================================================
+
+2.1 Target Band Selection
+    - User selects an explicit target IELTS Band Score (e.g., Band 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0).
+    - Platform sets internal rubric guidelines strictly aligned with the chosen Band criteria across four dimensions:
+        1. Task Achievement / Task Response (TA/TR)
+        2. Coherence & Cohesion (CC)
+        3. Lexical Resource (LR)
+        4. Grammatical Range & Accuracy (GRA)
+
+2.2 Assistance Mode Selection
+    - Mode A: Active Assistant Mode (Real-Time Guidance)
+      Provides live, non-intrusive feedback during active drafting.
+    - Mode B: Focus Exam Mode (Post-Submission Only)
+      Simulates actual test conditions; real-time guidance is muted, and evaluation occurs solely upon completion.
+
+
+================================================================================
+3. PHASE 2: REAL-TIME WRITING & GUIDANCE ENGINE (ACTIVE MODE)
+================================================================================
+
+3.1 Feedback Triggers & Buffer Logic
+    - Non-Blocking Execution: Feedback DOES NOT trigger on every keystroke or word to preserve cognitive flow.
+    - Triggers activate upon:
+        a) Completion of a paragraph (pressing Enter/Return twice).
+        b) Pause in typing exceeding 30–45 seconds.
+        c) Reaching specific word count thresholds (e.g., minimum 50 words to begin evaluation).
+
+3.2 Scenario A: Writing Below Selected Level
+    - Platform Action: Generates pedagogical, non-directive suggestions matched strictly to the target band requirements.
+    - Guidance Categories:
+        * Lexical Resource: Highlights overused simple words and suggests category types (e.g., "Consider utilizing academic verbs related to cause and effect here to reach Band 7.0").
+        * Coherence & Cohesion: Identifies missing transitions or weak topic sentences (e.g., "This paragraph transitions abruptly. Consider using a contrastive linking phrase at the start").
+        * Task Response / Logic: Flags unsupported assertions (e.g., "You have stated an argument but haven't provided a supporting explanation or example").
+    - Downward Level Offer: If user performance remains consistently below target across two consecutive paragraphs, display a non-modal banner:
+      "This target band appears challenging for this task. Would you like to adjust your target to Band [Current - 0.5/1.0] to focus on core structures?"
+
+3.3 Scenario B: Writing Above Selected Level
+    - Platform Action: Evaluates whether user's sentence complexity, cohesion, and vocabulary exceed the target band.
+    - Upward Level Offer: Displays a subtle notification bar:
+      "Your current drafting demonstrates vocabulary and structural sophistication above Band [Selected]. Would you like to upgrade your target to Band [Target + 0.5/1.0] for a more accurate assessment?"
+
+3.4 Scenario C: Dynamic Mid-Task Level Switching
+    - Trigger: User changes Target Band Score at any point (beginning, middle, or end of drafting).
+    - Platform Action:
+        * Instantly updates the active system prompt and evaluation guardrails.
+        * Re-evaluates current buffer against newly selected band requirements.
+        * Adjusts all subsequent live guidance to match the new band strictly.
+
+3.5 Strict Guardrails for Real-Time Guidance
+    - NO Direct Answers / Sentences: The platform MUST NOT provide rewritten sentences, ready-to-use phrases, or exact replacements.
+    - Socratic Mentorship: Prompts must remain conceptual and instructional.
+    - Non-Modal UI: Suggestions appear in a collapsible side panel or subtle gutter indicators, keeping the primary editor clean.
+
+
+================================================================================
+4. PHASE 3: FINAL SUBMISSION & DUAL-LAYER ASSESSMENT
+================================================================================
+
+Upon clicking "Submit Task", the platform processes the essay through an expert IELTS Examiner engine.
+
+4.1 Layer 1: Objective Examiner Band Score
+    - Provides an accurate, unbiased evaluation of the final text, independent of the user's chosen target band.
+    - Scores each official criteria from 1.0 to 9.0:
+        * Task Achievement / Task Response Score & Commentary
+        * Coherence & Cohesion Score & Commentary
+        * Lexical Resource Score & Commentary
+        * Grammatical Range & Accuracy Score & Commentary
+    - Calculates the Overall IELTS Writing Band Score.
+
+4.2 Layer 2: Target Alignment & Gap Analysis Report
+    - Target Status: Clear indicator (Target Achieved / Target Not Met / Exceeded Target).
+    - Alignment Audit:
+        * Identifies specific paragraphs where writing matched, fell below, or exceeded the selected target band.
+        * Evaluates propriety of user's writing relative to the target chosen during drafting.
+    - Actionable Roadmaps: Focus areas for the next writing task to bridge gaps toward the target score.
+
+
+================================================================================
+5. BUSINESS & PEDAGOGICAL RULES SUMMARY
+================================================================================
+
+1. Target Band Centricity: Every live suggestion MUST reflect the requirements of the chosen target score—neither higher nor lower.
+2. Cognitive Flow Protection: No pop-up modals or blocking overlays while typing; active feedback must be delivered asynchronously.
+3. Skill-Building Integrity: The AI assists without doing the work. Direct sentence generation is strictly prohibited during live drafting.
+4. User Autonomy: Live feedback can be toggled off at any moment, shifting seamlessly into exam conditions.
+================================================================================
