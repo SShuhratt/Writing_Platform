@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useWritingStore } from '@/lib/store';
-import { AuthService, DEFAULT_TEST_PASS } from '@/lib/auth-service';
+import { AuthService } from '@/lib/auth-service';
 import { TargetBand } from '@/types/ielts';
 import { ALL_TARGET_BANDS } from '@/lib/ielts-rubric';
 import { 
@@ -13,7 +13,6 @@ import {
   ShieldAlert, 
   CheckCircle2, 
   ArrowRight,
-  User,
   Zap
 } from 'lucide-react';
 
@@ -76,12 +75,6 @@ export const AuthModals: React.FC = () => {
     setResetMsg(res.message);
   };
 
-  const handleFillTestUserCredentials = () => {
-    setLoginIdentifier('testuser@gmail.com');
-    setLoginPass(DEFAULT_TEST_PASS);
-    setError('');
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="w-full max-w-md glass-panel rounded-2xl p-6 border border-gray-700/80 shadow-2xl relative">
@@ -133,7 +126,7 @@ export const AuthModals: React.FC = () => {
                 required
                 value={loginIdentifier}
                 onChange={(e) => setLoginIdentifier(e.target.value)}
-                placeholder="e.g. testuser@gmail.com"
+                placeholder="Enter email or username"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900/90 border border-gray-700 text-white text-sm focus:outline-none focus:border-brand-500 placeholder-gray-600"
               />
             </div>
@@ -157,21 +150,6 @@ export const AuthModals: React.FC = () => {
                 placeholder="••••••••"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900/90 border border-gray-700 text-white text-sm focus:outline-none focus:border-brand-500 placeholder-gray-600"
               />
-            </div>
-
-            {/* Student Helper Option */}
-            <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/20 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-emerald-400" />
-                <span className="text-[11px] text-emerald-200">Default Student: <strong>testuser@gmail.com</strong></span>
-              </div>
-              <button
-                type="button"
-                onClick={handleFillTestUserCredentials}
-                className="px-2 py-0.5 rounded-lg bg-emerald-600/40 hover:bg-emerald-600/60 text-emerald-200 border border-emerald-500/40 text-[10px] font-bold"
-              >
-                Auto-fill Student
-              </button>
             </div>
 
             <button
