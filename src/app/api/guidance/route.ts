@@ -15,11 +15,17 @@ export async function POST(req: Request) {
       generationConfig: { responseMimeType: 'application/json' }
     });
 
-    const systemPrompt = `You are the Socratic Mentor for an IELTS Writing Assistant Platform.
-CRITICAL PEDAGOGICAL GUARDRAILS:
+    const systemPrompt = `You are the Real-Time Socratic Mentor for an IELTS Writing Assistant Platform.
+STRICT PEDAGOGICAL GUARDRAILS:
 1. You MUST NOT under any circumstances provide rewritten sentences, ready-to-use phrases, direct replacements, or copy-paste text.
 2. Provide ONLY conceptual, instructional, and Socratic guidance. Ask thought-provoking questions to guide the student's own revision.
 3. Your feedback MUST strictly reflect the requirements of the selected Target Band Score: Band ${targetBand}.
+
+EVALUATION FOCUS AREAS FOR LIVE WRITING:
+- Topic Sentence & Structural Check: Check if paragraph opening sentences have clear discourse markers/transitions.
+- 2-Sentence & 50-Word Milestones: Evaluate whether assertions are backed by extending explanations or examples.
+- Introduction & Conclusion Checks: Verify thesis statement in Introduction and thesis synthesis in Conclusion.
+- Lexical Resource Elevation: Highlight overused simple words and suggest academic register categories.
 
 TASK PROMPT: ${prompt.title} (${prompt.questionText})
 CURRENT STUDENT ESSAY:
@@ -54,8 +60,9 @@ Respond with valid JSON using this structure:
 }`;
 
     const result = await model.generateContent(systemPrompt);
-    const text = result.response.text();
-    const parsedData = JSON.parse(text || '{}');
+    const rawText = result.response.text();
+    const cleanText = (rawText || '{}').replace(/^```(json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    const parsedData = JSON.parse(cleanText);
     return NextResponse.json(parsedData);
   } catch (error: any) {
     console.error('Error in /api/guidance:', error);

@@ -1,8 +1,16 @@
 import { create } from 'zustand';
 import { TargetBand, AssistanceMode, IELTSTaskPrompt, SocraticGuidanceCard, LevelOfferAlert, SubmissionReport } from '@/types/ielts';
+import { User } from '@/types/auth';
 import { OFFICIAL_PROMPTS_DATABASE } from '@/lib/prompts-database';
+import { AuthService } from '@/lib/auth-service';
+
+export type AuthModalMode = 'LOGIN' | 'REGISTER' | 'RESET_PASSWORD' | null;
 
 interface WritingState {
+  // Auth state
+  currentUser: User | null;
+  authModalMode: AuthModalMode;
+
   // Config state
   targetBand: TargetBand;
   assistanceMode: AssistanceMode;
@@ -27,6 +35,10 @@ interface WritingState {
   history: SubmissionReport[];
 
   // Actions
+  setCurrentUser: (user: User | null) => void;
+  setAuthModalMode: (mode: AuthModalMode) => void;
+  logout: () => void;
+
   setTargetBand: (band: TargetBand) => void;
   setAssistanceMode: (mode: AssistanceMode) => void;
   setPrompt: (prompt: IELTSTaskPrompt) => void;
@@ -49,6 +61,9 @@ interface WritingState {
 }
 
 export const useWritingStore = create<WritingState>((set, get) => ({
+  currentUser: null,
+  authModalMode: null,
+
   targetBand: '7.0',
   assistanceMode: 'ACTIVE_ASSISTANT',
   currentPrompt: OFFICIAL_PROMPTS_DATABASE[0],
@@ -68,11 +83,19 @@ export const useWritingStore = create<WritingState>((set, get) => ({
   activeReport: null,
   history: [],
 
-  setTargetBand: (band: TargetBand) => {
-    set({ targetBand: band });
-    // Note: Workflow rule 3.4 - dynamic band score switching updates system prompt context and active guidance!
+  setCurrentUser: (user: User | null) => set({
+    currentUser: user,
+    targetBand: user?.targetBand || get().targetBand
+  }),
+
+  setAuthModalMode: (mode: AuthModalMode) => set({ authModalMode: mode }),
+
+  logout: () => {
+    AuthService.clearUser();
+    set({ currentUser: null, authModalMode: null });
   },
 
+  setTargetBand: (band: TargetBand) => set({ targetBand: band }),
   setAssistanceMode: (mode: AssistanceMode) => set({ assistanceMode: mode }),
 
   setPrompt: (prompt: IELTSTaskPrompt) => set({
@@ -111,7 +134,6 @@ export const useWritingStore = create<WritingState>((set, get) => ({
 
   setGuidanceCards: (cards: SocraticGuidanceCard[]) => set({ guidanceCards: cards }),
   addGuidanceCard: (card: SocraticGuidanceCard) => set((state) => ({
-    // Prevent duplicate recommendations for same paragraph/title
     guidanceCards: [card, ...state.guidanceCards.filter(c => c.id !== card.id)]
   })),
   clearGuidanceCard: (cardId: string) => set((state) => ({

@@ -66,8 +66,9 @@ Respond with valid JSON matching this schema:
 }`;
 
     const result = await model.generateContent(systemPrompt);
-    const text = result.response.text();
-    const parsedData = JSON.parse(text || '{}');
+    const rawText = result.response.text();
+    const cleanText = (rawText || '{}').replace(/^```(json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    const parsedData = JSON.parse(cleanText);
 
     // Calculate official overall band using standard IELTS formula rounding
     const ta = parsedData.layer1ExaminerReport?.taskResponse?.score || 6.5;

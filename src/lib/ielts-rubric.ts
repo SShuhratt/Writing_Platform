@@ -67,17 +67,18 @@ export const OFFICIAL_IELTS_RUBRICS: Record<TargetBand, CriterionRubric> = {
 export const ALL_TARGET_BANDS: TargetBand[] = ['5.0', '5.5', '6.0', '6.5', '7.0', '7.5', '8.0', '8.5', '9.0'];
 
 /**
- * Calculates official overall IELTS band score rounded to nearest 0.5 according to IELTS rules:
- * - If average ends in .25 -> rounded up to .50
- * - If average ends in .75 -> rounded up to next full band (.00)
+ * Calculates official overall IELTS band score rounded to nearest 0.5 according to official IELTS rules:
+ * - If average ends in .125 -> rounds down to .00
+ * - If average ends in .25 -> rounds up to .50
+ * - If average ends in .375 -> rounds up to .50
+ * - If average ends in .625 -> rounds down to .50
+ * - If average ends in .75 -> rounds up to next full band (.00)
  */
 export function calculateOverallBandScore(ta: number, cc: number, lr: number, gra: number): number {
   const avg = (ta + cc + lr + gra) / 4;
-  const decimal = avg - Math.floor(avg);
+  const decimal = avg % 1;
 
-  if (decimal < 0.125) return Math.floor(avg);
-  if (decimal < 0.375) return Math.floor(avg) + 0.5;
-  if (decimal < 0.625) return Math.floor(avg) + 0.5;
-  if (decimal < 0.875) return Math.floor(avg) + 1.0;
-  return Math.floor(avg) + 1.0;
+  if (decimal < 0.25) return Math.floor(avg);
+  if (decimal < 0.75) return Math.floor(avg) + 0.5;
+  return Math.ceil(avg);
 }

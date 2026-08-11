@@ -84,98 +84,144 @@ export async function generateSubmissionEvaluation(req: EvaluationRequest): Prom
 function generateMockSocraticGuidance(essayText: string, targetBand: TargetBand, prompt: IELTSTaskPrompt): RealtimeGuidanceResponse {
   const paragraphs = essayText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
   const targetNum = parseFloat(targetBand);
-  const wordCount = essayText.trim().split(/\s+/).length;
+  const wordCount = essayText.trim().split(/\s+/).filter(Boolean).length;
 
   const cards: SocraticGuidanceCard[] = [];
   let levelOffer: LevelOfferAlert | null = null;
 
-  // Simple heuristic checks for Socratic mentoring
+  // 1. Introduction Check (Paragraph 1)
+  if (paragraphs.length >= 1) {
+    const introText = paragraphs[0].toLowerCase();
+    const introSentences = (paragraphs[0].match(/[.!?](\s+|$)/g) || []).length;
+
+    if (introSentences === 1) {
+      cards.push({
+        id: `intro-structure-${Date.now()}`,
+        category: 'TASK_RESPONSE',
+        paragraphIndex: 1,
+        highlightSnippet: paragraphs[0].substring(0, 50) + '...',
+        title: `Introduction Thesis & Position Check`,
+        socraticPrompt: `Paragraph 1 currently contains 1 sentence. To establish a strong Band ${targetBand} introduction, how can you follow your background sentence with an explicit thesis statement framing your outline?`,
+        targetBandContext: targetBand,
+        createdAt: Date.now()
+      });
+    }
+  }
+
+  // 2. Topic Sentence & Structural Check (First sentence of Body Paragraphs)
+  paragraphs.forEach((p, idx) => {
+    if (idx > 0) {
+      const pSentences = p.match(/[^.!?]+[.!?]+/g) || [p];
+      const topicSentence = pSentences[0] || p;
+      const topicLower = topicSentence.toLowerCase();
+
+      // Coherence transition check in Topic Sentence
+      const transitions = ['furthermore', 'however', 'moreover', 'on the other hand', 'in contrast', 'consequently', 'firstly', 'secondly', 'another key factor'];
+      const hasTransition = transitions.some(t => topicLower.includes(t));
+
+      if (!hasTransition) {
+        cards.push({
+          id: `topic-sent-${idx}-${Date.now()}`,
+          category: 'COHERENCE_COHESION',
+          paragraphIndex: idx + 1,
+          highlightSnippet: topicSentence.trim().substring(0, 50) + '...',
+          title: `Paragraph ${idx + 1} Topic Sentence Transition`,
+          socraticPrompt: `The opening sentence of Paragraph ${idx + 1} introduces a main idea. For Band ${targetBand} cohesion, how might an introductory linking phrase or contrastive marker clarify how this idea relates to Paragraph ${idx}?`,
+          targetBandContext: targetBand,
+          createdAt: Date.now()
+        });
+      }
+    }
+  });
+
+  // 3. Lexical Resource & Academic Precision (Checked across all paragraphs)
   paragraphs.forEach((p, idx) => {
     const text = p.toLowerCase();
-
-    // Check Lexical Resource (LR) for target band requirements
     if (targetNum >= 7.0) {
-      if (text.includes('good') || text.includes('bad') || text.includes('important') || text.includes('thing')) {
+      if (text.includes('good') || text.includes('bad') || text.includes('important') || text.includes('thing') || text.includes('a lot of') || text.includes('people think')) {
         cards.push({
           id: `lr-${idx}-${Date.now()}`,
           category: 'LEXICAL_RESOURCE',
           paragraphIndex: idx + 1,
           highlightSnippet: p.substring(0, 45) + '...',
-          title: `Lexical Precision for Band ${targetBand}`,
-          socraticPrompt: `Paragraph ${idx + 1} uses basic descriptors like "important" or "good". To reach Band ${targetBand}, what precise academic vocabulary or Cause & Effect collocations could better convey this nuance?`,
+          title: `Lexical Resource Elevation (Band ${targetBand})`,
+          socraticPrompt: `Paragraph ${idx + 1} uses general vocabulary (e.g. "important", "people think"). What precise academic collocations or Cause & Effect terms (e.g., "pivotal role", "advocates contend") could elevate this phrasing for Band ${targetBand}?`,
           targetBandContext: targetBand,
           createdAt: Date.now()
         });
       }
     }
 
-    // Check Coherence & Cohesion (CC)
-    if (idx > 0 && !text.includes('however') && !text.includes('furthermore') && !text.includes('in addition') && !text.includes('consequently') && !text.includes('on the other hand')) {
+    // 4. Argument Support & Evidence Depth (Check after 2 sentences in body paragraphs)
+    const sentenceCount = (p.match(/[.!?](\s+|$)/g) || []).length;
+    if (idx > 0 && sentenceCount >= 2 && sentenceCount < 4) {
       cards.push({
-        id: `cc-${idx}-${Date.now()}`,
-        category: 'COHERENCE_COHESION',
-        paragraphIndex: idx + 1,
-        highlightSnippet: p.substring(0, 45) + '...',
-        title: `Transition & Paragraph Linking`,
-        socraticPrompt: `Paragraph ${idx + 1} begins abruptly. How might a contrastive or additive discourse marker strengthen the logical connection with Paragraph ${idx}?`,
-        targetBandContext: targetBand,
-        createdAt: Date.now()
-      });
-    }
-
-    // Check Task Response (TA/TR)
-    if (text.length < 120 && idx > 0) {
-      cards.push({
-        id: `tr-${idx}-${Date.now()}`,
+        id: `tr-support-${idx}-${Date.now()}`,
         category: 'TASK_RESPONSE',
         paragraphIndex: idx + 1,
-        highlightSnippet: p.substring(0, 45) + '...',
-        title: `Argument Extension & Support`,
-        socraticPrompt: `You have stated an assertion in Paragraph ${idx + 1}, but it lacks an extended explanation or concrete real-world example. What specific evidence can reinforce this point?`,
+        highlightSnippet: p.substring(0, 50) + '...',
+        title: `2-Sentence Milestone: Evidence & Example Check`,
+        socraticPrompt: `You have drafted 2 key sentences in Paragraph ${idx + 1}. To achieve Band ${targetBand} Task Response, what specific real-world example or logical illustration can you add to extend this point?`,
         targetBandContext: targetBand,
         createdAt: Date.now()
       });
     }
   });
 
-  // Evaluate Level Offer Scenarios (3.2 & 3.3)
+  // 5. Conclusion Check
+  if (paragraphs.length >= 3) {
+    const lastP = paragraphs[paragraphs.length - 1];
+    const lastPLower = lastP.toLowerCase();
+    const isConclusion = lastPLower.includes('in conclusion') || lastPLower.includes('to conclude') || lastPLower.includes('to summarize') || lastPLower.includes('overall');
+
+    if (isConclusion) {
+      cards.push({
+        id: `conclusion-check-${Date.now()}`,
+        category: 'TASK_RESPONSE',
+        paragraphIndex: paragraphs.length,
+        highlightSnippet: lastP.substring(0, 50) + '...',
+        title: `Conclusion Synthesis & Final Stand`,
+        socraticPrompt: `Your concluding paragraph synthesizes your essay. Ensure your final sentence explicitly reiterates your overarching stance without introducing new unargued points.`,
+        targetBandContext: targetBand,
+        createdAt: Date.now()
+      });
+    }
+  }
+
+  // Level Offer Evaluation (Scenario A & B)
   if (paragraphs.length >= 2) {
     const avgWordsPerPara = wordCount / paragraphs.length;
-
-    // Downward offer if paragraph depth is minimal relative to high target band
-    if (targetNum >= 7.5 && avgWordsPerPara < 45) {
+    if (targetNum >= 7.5 && avgWordsPerPara < 40) {
       const lowerBand = (targetNum - 0.5).toFixed(1) as TargetBand;
       levelOffer = {
         type: 'DOWNWARD',
         suggestedBand: lowerBand,
-        reason: `Your current paragraph depth is concise for Band ${targetBand}. Consider adjusting to Band ${lowerBand} to focus on mastering core argument development first.`
+        reason: `Your paragraph depth is concise for Band ${targetBand}. Consider adjusting to Band ${lowerBand} to focus on mastering core argument development first.`
       };
-    }
-    // Upward offer if user writes with advanced complexity on a lower target
-    else if (targetNum <= 6.5 && wordCount > 180 && paragraphs.length >= 3) {
+    } else if (targetNum <= 6.5 && wordCount > 170 && paragraphs.length >= 3) {
       const higherBand = (targetNum + 0.5).toFixed(1) as TargetBand;
       levelOffer = {
         type: 'UPWARD',
         suggestedBand: higherBand,
-        reason: `Your drafting demonstrates lexical variety and paragraph structure exceeding Band ${targetBand}! Would you like to raise your target to Band ${higherBand}?`
+        reason: `Your drafting demonstrates lexical variety and structural depth exceeding Band ${targetBand}! Would you like to raise your target to Band ${higherBand}?`
       };
     }
   }
 
-  // Ensure default card if text is developing well
-  if (cards.length === 0 && wordCount >= 50) {
+  // Fallback card if empty
+  if (cards.length === 0 && wordCount >= 30) {
     cards.push({
       id: `general-${Date.now()}`,
       category: 'TASK_RESPONSE',
-      paragraphIndex: paragraphs.length,
-      title: `Band ${targetBand} Structure Check`,
-      socraticPrompt: `Your essay is progressing well. Ensure your upcoming concluding paragraph directly addresses all parts of the prompt: "${prompt.title}".`,
+      paragraphIndex: paragraphs.length || 1,
+      title: `Band ${targetBand} Progress Check`,
+      socraticPrompt: `Your response is developing well. As you draft your next sentences, focus on linking your supporting points directly back to "${prompt.title}".`,
       targetBandContext: targetBand,
       createdAt: Date.now()
     });
   }
 
-  return { cards, levelOffer };
+  return { cards: cards.slice(0, 4), levelOffer };
 }
 
 // --------------------------------------------------------------------------------
@@ -191,7 +237,6 @@ function generateMockSubmissionEvaluation(
   const words = essayText.trim().split(/\s+/).filter(Boolean).length;
   const targetNum = parseFloat(targetBand);
 
-  // Baseline evaluation heuristic
   let taScore = 6.5;
   let ccScore = 6.5;
   let lrScore = 6.5;
@@ -201,22 +246,19 @@ function generateMockSubmissionEvaluation(
     taScore += 0.5;
     ccScore += 0.5;
   } else {
-    taScore -= 1.0; // Under word count penalty
+    taScore -= 1.0;
   }
 
   const textLower = essayText.toLowerCase();
 
-  // Lexical resource heuristic
   const academicTerms = ['consequently', 'subsequently', 'demonstrates', 'substantive', 'imperative', 'predominantly', 'underlying'];
   const matchedAcademic = academicTerms.filter(t => textLower.includes(t)).length;
   lrScore += Math.min(1.5, matchedAcademic * 0.4);
 
-  // Coherence heuristic
   const connectives = ['furthermore', 'however', 'in addition', 'on the other hand', 'for instance', 'in conclusion'];
   const matchedConnectives = connectives.filter(c => textLower.includes(c)).length;
   ccScore += Math.min(1.0, matchedConnectives * 0.3);
 
-  // Cap scores between 5.0 and 9.0
   taScore = Math.min(9.0, Math.max(5.0, Math.round(taScore * 2) / 2));
   ccScore = Math.min(9.0, Math.max(5.0, Math.round(ccScore * 2) / 2));
   lrScore = Math.min(9.0, Math.max(5.0, Math.round(lrScore * 2) / 2));
@@ -224,7 +266,6 @@ function generateMockSubmissionEvaluation(
 
   const overallBand = calculateOverallBandScore(taScore, ccScore, lrScore, graScore);
 
-  // Determine Layer 2 Target Alignment
   let targetStatus: 'TARGET_ACHIEVED' | 'TARGET_NOT_MET' | 'EXCEEDED_TARGET' = 'TARGET_ACHIEVED';
   if (overallBand > targetNum) targetStatus = 'EXCEEDED_TARGET';
   else if (overallBand < targetNum) targetStatus = 'TARGET_NOT_MET';

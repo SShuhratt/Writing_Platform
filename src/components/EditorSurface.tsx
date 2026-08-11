@@ -3,20 +3,14 @@
 import React, { useEffect, useRef } from 'react';
 import { useWritingStore } from '@/lib/store';
 import { generateRealtimeGuidance } from '@/lib/ai-service';
-import { TargetBand } from '@/types/ielts';
 import { 
-  Sparkles, 
   Clock, 
   FileText, 
   AlignLeft, 
   TrendingUp, 
   TrendingDown, 
   Send, 
-  Zap,
-  CheckCircle,
-  Loader2,
-  AlertTriangle,
-  Info
+  Loader2
 } from 'lucide-react';
 
 interface EditorSurfaceProps {
@@ -48,6 +42,21 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
 
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const prevParagraphCountRef = useRef<number>(0);
+  const lastEvaluatedSentenceCountRef = useRef<number>(0);
+  const lastEvaluated50WordBucketRef = useRef<number>(0);
+  const lastEvaluatedTopicSentenceParaIndexRef = useRef<number>(0);
+  const checkedConclusionRef = useRef<boolean>(false);
+
+  // Reset Milestone Tracking Refs on Essay Reset
+  useEffect(() => {
+    if (essayText.length === 0) {
+      prevParagraphCountRef.current = 0;
+      lastEvaluatedSentenceCountRef.current = 0;
+      lastEvaluated50WordBucketRef.current = 0;
+      lastEvaluatedTopicSentenceParaIndexRef.current = 0;
+      checkedConclusionRef.current = false;
+    }
+  }, [essayText]);
 
   // Timer Tick Hook
   useEffect(() => {
@@ -70,9 +79,10 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
   };
 
   // Trigger Asynchronous Realtime Analysis (Workflow 3.1 & 3.4)
-  const triggerAnalysis = async (currentText: string) => {
-    if (assistanceMode === 'FOCUS_EXAM') return; // Guidance muted in Exam Mode
-    if (currentText.trim().split(/\s+/).length < 30) return; // Wait for minimum baseline text
+  const triggerAnalysis = async (currentText: string, triggerReason?: string) => {
+    if (assistanceMode === 'FOCUS_EXAM' || isAnalyzing) return; // Muted in Focus Exam Mode or if actively analyzing
+    const currentWords = currentText.trim().split(/\s+/).filter(Boolean).length;
+    if (currentWords < 10) return; // Baseline minimum
 
     setIsAnalyzing(true);
     try {
@@ -96,7 +106,24 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
     }
   };
 
-  // Handle Typing & Debounced Inactivity Triggers (30-45s pause & double enter)
+  // Helper: Count complete sentences using punctuation [.!?]
+  const countCompleteSentences = (text: string): number => {
+    const matches = text.match(/[.!?](\s+|$)/g);
+    return matches ? matches.length : 0;
+  };
+
+  // Check for Conclusion keywords
+  const isConclusionTyped = (text: string): boolean => {
+    const lower = text.toLowerCase();
+    return lower.includes('in conclusion') || 
+           lower.includes('to conclude') || 
+           lower.includes('in summary') || 
+           lower.includes('to summarize') || 
+           lower.includes('overall, it is evident') ||
+           lower.includes('overall, in conclusion');
+  };
+
+  // Continuous Multi-Condition Trigger Engine
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     updateEssayText(newText);
@@ -107,28 +134,74 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
 
     if (assistanceMode === 'FOCUS_EXAM') return;
 
-    // Trigger A: Paragraph completion (new paragraph detected)
-    const currentParagraphs = newText.split(/\n\s*\n/).filter(p => p.trim().length > 0).length;
-    if (currentParagraphs > prevParagraphCountRef.current && newText.trim().length >= 50) {
-      triggerAnalysis(newText);
-    }
-    prevParagraphCountRef.current = currentParagraphs;
+    const currentWords = newText.trim().split(/\s+/).filter(Boolean).length;
+    const currentSentences = countCompleteSentences(newText);
+    const paragraphs = newText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    const currentParagraphs = paragraphs.length;
 
-    // Trigger B: Inactivity Pause (Debounced 35 seconds)
+    let shouldTriggerImmediately = false;
+    let triggerReason = '';
+
+    // Trigger Condition 1: EACH 50 Words Milestone (50, 100, 150, 200, 250, 300...)
+    const current50Bucket = Math.floor(currentWords / 50);
+    if (current50Bucket > lastEvaluated50WordBucketRef.current && current50Bucket > 0) {
+      lastEvaluated50WordBucketRef.current = current50Bucket;
+      shouldTriggerImmediately = true;
+      triggerReason = `Milestone: ${current50Bucket * 50} Words Reached`;
+    }
+
+    // Trigger Condition 2: EACH 2 Complete Sentences Milestone (at 2, 4, 6, 8, 10 sentences...)
+    if (currentSentences - lastEvaluatedSentenceCountRef.current >= 2) {
+      lastEvaluatedSentenceCountRef.current = currentSentences;
+      shouldTriggerImmediately = true;
+      triggerReason = `Milestone: ${currentSentences} Sentences Completed`;
+    }
+
+    // Trigger Condition 3: EACH Paragraph Completion (pressing Enter twice)
+    if (currentParagraphs > prevParagraphCountRef.current) {
+      prevParagraphCountRef.current = currentParagraphs;
+      shouldTriggerImmediately = true;
+      triggerReason = `Paragraph ${currentParagraphs} Completed`;
+    }
+
+    // Trigger Condition 4: First Sentence of EACH Paragraph (Topic Sentence & Structure Check)
+    if (currentParagraphs > 0) {
+      const activeParagraph = paragraphs[paragraphs.length - 1] || '';
+      const activeParaSentences = countCompleteSentences(activeParagraph);
+      if (activeParaSentences >= 1 && lastEvaluatedTopicSentenceParaIndexRef.current !== currentParagraphs) {
+        lastEvaluatedTopicSentenceParaIndexRef.current = currentParagraphs;
+        shouldTriggerImmediately = true;
+        triggerReason = `Paragraph ${currentParagraphs} Topic Sentence`;
+      }
+    }
+
+    // Trigger Condition 5: EACH Conclusion Signal or Final Summary Paragraph
+    if (isConclusionTyped(newText) && !checkedConclusionRef.current) {
+      checkedConclusionRef.current = true;
+      shouldTriggerImmediately = true;
+      triggerReason = 'Conclusion Signal Detected';
+    }
+
+    if (shouldTriggerImmediately) {
+      triggerAnalysis(newText, triggerReason);
+    }
+
+    // Continuous Short Typing Pause Trigger (3 Seconds)
     if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
     pauseTimerRef.current = setTimeout(() => {
-      if (newText.trim().length >= 50) {
-        triggerAnalysis(newText);
+      if (currentWords >= 10) {
+        triggerAnalysis(newText, 'Typing Pause');
       }
-    }, 35000);
+    }, 3000);
   };
 
-  // Re-trigger analysis on dynamic Target Band Score change (Workflow 3.4)
+  // Re-trigger analysis IMMEDIATELY when Target Band or Assistance Mode changes mid-task
   useEffect(() => {
-    if (essayText.trim().length >= 50 && assistanceMode === 'ACTIVE_ASSISTANT') {
-      triggerAnalysis(essayText);
+    const currentWords = essayText.trim().split(/\s+/).filter(Boolean).length;
+    if (currentWords >= 10 && assistanceMode === 'ACTIVE_ASSISTANT') {
+      triggerAnalysis(essayText, 'Dynamic Band Target Change');
     }
-  }, [targetBand]);
+  }, [targetBand, assistanceMode]);
 
   const targetWords = currentPrompt.minWordCount;
   const wordProgressPercent = Math.min(100, Math.round((wordCount / targetWords) * 100));
@@ -136,7 +209,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
   return (
     <div className="flex flex-col h-full space-y-4">
 
-      {/* Non-Modal Level Offer Banner (Workflow 3.2 & 3.3) */}
+      {/* Non-Modal Level Offer Banner */}
       {levelOffer && assistanceMode === 'ACTIVE_ASSISTANT' && (
         <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 animate-fadeIn transition-all ${
           levelOffer.type === 'UPWARD'
@@ -187,7 +260,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
         </div>
       )}
 
-      {/* Editor Main Canvas Header: Prompt Details & Live Bar */}
+      {/* Editor Main Canvas Header */}
       <div className="glass-panel rounded-2xl p-5 border border-gray-800 space-y-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -240,7 +313,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
           onChange={handleTextChange}
           placeholder={
             assistanceMode === 'ACTIVE_ASSISTANT'
-              ? `Start drafting your Band ${targetBand} response here... Live Socratic feedback will trigger periodically as you complete paragraphs.`
+              ? `Start drafting your Band ${targetBand} response here... Live Socratic feedback triggers continuously for each topic sentence, 2 sentences, 50 words, and paragraph completion.`
               : `Focus Exam Mode Active: Live feedback is muted. Draft under exam conditions and click "Submit Task" when finished.`
           }
           className="w-full flex-1 p-6 rounded-2xl bg-gray-900/80 border border-gray-800 text-gray-100 text-base leading-relaxed focus:outline-none focus:border-brand-500/80 placeholder-gray-600 resize-none font-sans shadow-inner tracking-wide"
