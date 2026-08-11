@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useWritingStore } from '@/lib/store';
-import { Sparkles, ArrowRight, ShieldCheck, Zap, Award, Target, BookOpen } from 'lucide-react';
+import { Sparkles, ArrowRight, Zap } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
   const { setAuthModalMode, currentUser } = useWritingStore();
@@ -48,7 +48,7 @@ export const HeroSection: React.FC = () => {
                 <ArrowRight className="h-4 w-4" />
               </Link>
 
-              {!currentUser ? (
+              {!currentUser && (
                 <button
                   onClick={() => setAuthModalMode('REGISTER')}
                   className="flex items-center gap-2 px-6 py-3.5 rounded-xl glass-card text-gray-200 hover:text-white hover:border-gray-500 font-semibold text-sm transition-all"
@@ -56,14 +56,6 @@ export const HeroSection: React.FC = () => {
                   <Zap className="h-4 w-4 text-amber-400" />
                   <span>Create Free Account</span>
                 </button>
-              ) : (
-                <Link
-                  href="/admin"
-                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-indigo-950/60 text-indigo-200 border border-indigo-500/40 hover:bg-indigo-900/60 font-semibold text-sm transition-all"
-                >
-                  <ShieldCheck className="h-4 w-4 text-indigo-400" />
-                  <span>Admin Dashboard</span>
-                </Link>
               )}
             </div>
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { GraduationCap, ShieldCheck } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
@@ -22,10 +22,6 @@ export const Footer: React.FC = () => {
         <div className="flex items-center gap-6 text-xs text-gray-400">
           <Link href="/workspace" className="hover:text-white transition-colors">
             Practice Workspace
-          </Link>
-          <Link href="/admin" className="hover:text-indigo-300 transition-colors flex items-center gap-1">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Admin Portal</span>
           </Link>
         </div>
 

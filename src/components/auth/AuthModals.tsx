@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useWritingStore } from '@/lib/store';
-import { AuthService, DEFAULT_ADMIN_PASS, DEFAULT_TEST_PASS } from '@/lib/auth-service';
+import { AuthService, DEFAULT_TEST_PASS } from '@/lib/auth-service';
 import { TargetBand } from '@/types/ielts';
 import { ALL_TARGET_BANDS } from '@/lib/ielts-rubric';
 import { 
@@ -13,7 +13,6 @@ import {
   ShieldAlert, 
   CheckCircle2, 
   ArrowRight,
-  ShieldCheck,
   User,
   Zap
 } from 'lucide-react';
@@ -21,7 +20,7 @@ import {
 export const AuthModals: React.FC = () => {
   const { authModalMode, setAuthModalMode, setCurrentUser } = useWritingStore();
 
-  // Form states
+  // Form states (Empty - no prefill)
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPass, setLoginPass] = useState('');
 
@@ -75,12 +74,6 @@ export const AuthModals: React.FC = () => {
     }
     const res = AuthService.resetPassword(resetEmail);
     setResetMsg(res.message);
-  };
-
-  const handleFillAdminCredentials = () => {
-    setLoginIdentifier('shuhrat3');
-    setLoginPass(DEFAULT_ADMIN_PASS);
-    setError('');
   };
 
   const handleFillTestUserCredentials = () => {
@@ -140,7 +133,7 @@ export const AuthModals: React.FC = () => {
                 required
                 value={loginIdentifier}
                 onChange={(e) => setLoginIdentifier(e.target.value)}
-                placeholder="testuser@gmail.com or shuhrat3"
+                placeholder="e.g. testuser@gmail.com"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900/90 border border-gray-700 text-white text-sm focus:outline-none focus:border-brand-500 placeholder-gray-600"
               />
             </div>
@@ -166,35 +159,19 @@ export const AuthModals: React.FC = () => {
               />
             </div>
 
-            {/* Quick Credentials Helpers */}
-            <div className="space-y-2 pt-1">
-              <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/20 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-emerald-400" />
-                  <span className="text-[11px] text-emerald-200">Default Student: <strong>testuser@gmail.com</strong></span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleFillTestUserCredentials}
-                  className="px-2 py-0.5 rounded-lg bg-emerald-600/40 hover:bg-emerald-600/60 text-emerald-200 border border-emerald-500/40 text-[10px] font-bold"
-                >
-                  Auto-fill Student
-                </button>
+            {/* Student Helper Option */}
+            <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-emerald-400" />
+                <span className="text-[11px] text-emerald-200">Default Student: <strong>testuser@gmail.com</strong></span>
               </div>
-
-              <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/20 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-indigo-400" />
-                  <span className="text-[11px] text-indigo-200">Default Admin: <strong>shuhrat3</strong></span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleFillAdminCredentials}
-                  className="px-2 py-0.5 rounded-lg bg-indigo-600/40 hover:bg-indigo-600/60 text-indigo-200 border border-indigo-500/40 text-[10px] font-bold"
-                >
-                  Auto-fill Admin
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleFillTestUserCredentials}
+                className="px-2 py-0.5 rounded-lg bg-emerald-600/40 hover:bg-emerald-600/60 text-emerald-200 border border-emerald-500/40 text-[10px] font-bold"
+              >
+                Auto-fill Student
+              </button>
             </div>
 
             <button

@@ -162,10 +162,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <PenTool className="h-4 w-4 text-brand-400" />
               <span>Practice Workspace</span>
             </Link>
-            <Link href="/admin" className="flex items-center gap-1.5 hover:text-amber-300 transition-colors">
-              <LayoutDashboard className="h-4 w-4 text-amber-400" />
-              <span>Admin Dashboard</span>
-            </Link>
+            {currentUser?.role === 'admin' && (
+              <Link href="/admin" className="flex items-center gap-1.5 hover:text-amber-300 transition-colors">
+                <LayoutDashboard className="h-4 w-4 text-amber-400" />
+                <span>Admin Dashboard</span>
+              </Link>
+            )}
           </div>
         )}
 
@@ -206,9 +208,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
                 <span className="font-bold text-white max-w-[100px] truncate">{currentUser.username}</span>
                 {currentUser.role === 'admin' && (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  <Link href="/admin" className="text-[9px] px-1.5 py-0.2 rounded font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors">
                     ADMIN
-                  </span>
+                  </Link>
                 )}
               </div>
 

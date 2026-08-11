@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useWritingStore } from '@/lib/store';
-import { AuthService, DEFAULT_ADMIN_PASS } from '@/lib/auth-service';
+import { AuthService } from '@/lib/auth-service';
 import { getAdminAnalyticsKPIs, getBandDistributionMetrics, getRecentStudentSessions } from '@/lib/admin-service';
 import { Navbar } from '@/components/Navbar';
 import { AuthModals } from '@/components/auth/AuthModals';
@@ -13,24 +13,21 @@ import {
   FileText, 
   Award, 
   Cpu, 
-  TrendingUp, 
   Clock, 
   CheckCircle2, 
   ArrowLeft, 
   Lock, 
-  Key, 
   BarChart3, 
   RefreshCw,
-  Zap,
   Activity
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const { currentUser, setCurrentUser } = useWritingStore();
 
-  // Admin Login state
-  const [adminUsername, setAdminUsername] = useState('shuhrat3');
-  const [adminPassword, setAdminPassword] = useState(DEFAULT_ADMIN_PASS);
+  // Admin Login state (Empty by default - no prefill)
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
   // Load User from Session on Mount
@@ -48,7 +45,7 @@ export default function AdminDashboardPage() {
     if (res.success && res.user && res.user.role === 'admin') {
       setCurrentUser(res.user);
     } else {
-      setLoginError('Invalid Admin credentials. Use shuhrat3 / $Huhrat333');
+      setLoginError('Invalid Admin credentials.');
     }
   };
 
@@ -95,7 +92,7 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* SECURITY GUARD: If Not Admin, Show Admin Login Portal */}
+        {/* SECURITY GUARD: If Not Admin, Show Clean Admin Login Portal */}
         {!isAdmin ? (
           <div className="max-w-md mx-auto py-12">
             <div className="glass-panel rounded-3xl p-8 border border-gray-700/80 shadow-2xl space-y-6">
@@ -123,7 +120,7 @@ export default function AdminDashboardPage() {
                     required
                     value={adminUsername}
                     onChange={(e) => setAdminUsername(e.target.value)}
-                    placeholder="shuhrat3"
+                    placeholder="Enter admin username"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900/90 border border-gray-700 text-white text-sm focus:outline-none focus:border-indigo-500 font-mono"
                   />
                 </div>
@@ -135,20 +132,9 @@ export default function AdminDashboardPage() {
                     required
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="$Huhrat333"
+                    placeholder="••••••••"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900/90 border border-gray-700 text-white text-sm focus:outline-none focus:border-indigo-500 font-mono"
                   />
-                </div>
-
-                <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-xs text-indigo-200 flex items-center justify-between">
-                  <span>Default Admin: <strong>shuhrat3</strong></span>
-                  <button
-                    type="button"
-                    onClick={() => { setAdminUsername('shuhrat3'); setAdminPassword(DEFAULT_ADMIN_PASS); }}
-                    className="px-2.5 py-1 rounded-lg bg-indigo-600/40 text-indigo-200 font-bold text-[10px]"
-                  >
-                    Auto-fill
-                  </button>
                 </div>
 
                 <button
