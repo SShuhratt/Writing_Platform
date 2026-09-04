@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useWritingStore } from '@/lib/store';
 import { generateRealtimeGuidance } from '@/lib/ai-service';
 import { 
@@ -10,7 +10,9 @@ import {
   TrendingUp, 
   TrendingDown, 
   Send, 
-  Loader2
+  Loader2,
+  Shield,
+  ShieldAlert
 } from 'lucide-react';
 
 interface EditorSurfaceProps {
@@ -39,6 +41,9 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
     setLevelOffer,
     isSubmitting
   } = useWritingStore();
+
+  const [pasteBlockedWarning, setPasteBlockedWarning] = useState<string | null>(null);
+  const pasteWarningTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const prevParagraphCountRef = useRef<number>(0);
@@ -123,6 +128,26 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
            lower.includes('overall, in conclusion');
   };
 
+  const triggerPasteBlockedWarning = () => {
+    setPasteBlockedWarning(
+      'Pasting is disabled in the Practice Workspace. Direct typing is required to build genuine IELTS exam writing speed, muscle memory, and cognitive vocabulary recall.'
+    );
+    if (pasteWarningTimerRef.current) clearTimeout(pasteWarningTimerRef.current);
+    pasteWarningTimerRef.current = setTimeout(() => {
+      setPasteBlockedWarning(null);
+    }, 4500);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    triggerPasteBlockedWarning();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    triggerPasteBlockedWarning();
+  };
+
   // Continuous Multi-Condition Trigger Engine
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
@@ -184,6 +209,20 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
 
     if (shouldTriggerImmediately) {
       triggerAnalysis(newText, triggerReason);
+    }
+
+    // Normalize milestone refs if user deleted/backspaced text
+    if (current50Bucket < lastEvaluated50WordBucketRef.current) {
+      lastEvaluated50WordBucketRef.current = current50Bucket;
+    }
+    if (currentSentences < lastEvaluatedSentenceCountRef.current) {
+      lastEvaluatedSentenceCountRef.current = currentSentences;
+    }
+    if (currentParagraphs < prevParagraphCountRef.current) {
+      prevParagraphCountRef.current = currentParagraphs;
+    }
+    if (!isConclusionTyped(newText)) {
+      checkedConclusionRef.current = false;
     }
 
     // Continuous Short Typing Pause Trigger (3 Seconds)
@@ -292,6 +331,14 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
               <span className="font-bold">{paragraphCount}</span>
               <span className="text-gray-500">paras</span>
             </div>
+
+            <div 
+              className="flex items-center gap-1.5 bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-500/30 text-xs text-emerald-300 select-none"
+              title="Copy-pasting is restricted to guarantee active skill acquisition"
+            >
+              <Shield className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-[11px] font-semibold">Anti-Paste Active</span>
+            </div>
           </div>
         </div>
 
@@ -306,11 +353,29 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
         </div>
       </div>
 
+      {/* Anti-Paste Pedagogical Notification Toast */}
+      {pasteBlockedWarning && (
+        <div className="p-3.5 rounded-xl bg-amber-950/95 border border-amber-500/60 text-amber-200 flex items-center justify-between gap-3 shadow-xl animate-fadeIn">
+          <div className="flex items-center gap-2.5 text-xs font-medium">
+            <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
+            <span>{pasteBlockedWarning}</span>
+          </div>
+          <button
+            onClick={() => setPasteBlockedWarning(null)}
+            className="px-2.5 py-1 rounded-lg bg-amber-900/60 hover:bg-amber-800/80 text-amber-200 text-xs font-semibold shrink-0 transition-colors"
+          >
+            Got it
+          </button>
+        </div>
+      )}
+
       {/* Main Textarea Canvas */}
       <div className="relative flex-1 min-h-[420px] flex flex-col">
         <textarea
           value={essayText}
           onChange={handleTextChange}
+          onPaste={handlePaste}
+          onDrop={handleDrop}
           placeholder={
             assistanceMode === 'ACTIVE_ASSISTANT'
               ? `Start drafting your Band ${targetBand} response here... Live Socratic feedback triggers continuously for each topic sentence, 2 sentences, 50 words, and paragraph completion.`

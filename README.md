@@ -20,8 +20,17 @@ An official-grade, adaptive IELTS writing platform built with Next.js 14, Tailwi
 ## 🚦 Routes & Pages
 
 - **`/`**: Landing Page (Hero, Socratic Band 5.0–9.0 showcase, 3-step workflow, footer).
-- **`/workspace`**: Real-time Socratic drafting surface with dynamic level offers and Dual-Layer Assessment.
+- **`/workspace`**: Real-time Socratic drafting surface with Anti-Paste Learning Guard, dynamic level offers, and Dual-Layer Assessment.
 - **`/admin`**: Guarded Admin Monitoring Dashboard (KPIs, band distribution charts, live practice feed).
+
+---
+
+## ✨ Key Pedagogical & Export Features
+
+- **🛡️ Anti-Paste Learning Guard**: Copy-paste and drag-and-drop text insertion are strictly blocked in the writing workspace, enforcing authentic active writing and muscle memory retention.
+- **📄 Downloadable PDF Reports**: Export high-resolution, vector-sharp `.pdf` official IELTS Test Report Forms featuring overall band scores, 4-criteria breakdown, examiner commentary, and candidate essay transcripts.
+- **✈️ Telegram Results Sharing**: Instant one-click Telegram sharing formatted with score emojis, criteria breakdown, and practice links for teachers, friends, or study groups.
+- **📋 Clipboard Summary Export**: Quick copy of score summary for WhatsApp, Discord, or email.
 
 ---
 

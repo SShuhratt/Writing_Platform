@@ -16,9 +16,15 @@ import {
   X,
   TrendingUp,
   Layers,
-  ListOrdered
+  ListOrdered,
+  FileDown,
+  Send,
+  Copy,
+  Check,
+  Printer
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { generateIELTSReportPDF, generateTelegramShareData } from '@/lib/pdf-service';
 
 interface DualLayerReportModalProps {
   report: SubmissionReport | null;
@@ -26,7 +32,10 @@ interface DualLayerReportModalProps {
 }
 
 export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ report, onClose }) => {
+  const { currentUser } = useWritingStore();
   const [activeTab, setActiveTab] = useState<'LAYER_1' | 'LAYER_2'>('LAYER_1');
+  const [copiedSuccess, setCopiedSuccess] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!report) return null;
 
@@ -67,6 +76,35 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
     }
   };
 
+  const candidateDisplayName = currentUser?.fullName || currentUser?.username || 'IELTS Candidate';
+
+  const handleDownloadPdf = () => {
+    setIsGeneratingPdf(true);
+    try {
+      generateIELTSReportPDF(report, candidateDisplayName);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleShareToTelegram = () => {
+    const { shareUrl } = generateTelegramShareData(report, candidateDisplayName);
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCopySummary = async () => {
+    const { shareText } = generateTelegramShareData(report, candidateDisplayName);
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopiedSuccess(true);
+      setTimeout(() => setCopiedSuccess(false), 2500);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -76,14 +114,14 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
       <div className="w-full max-w-4xl glass-panel rounded-2xl p-6 border border-gray-700/80 shadow-2xl relative max-h-[92vh] flex flex-col">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
+        <div className="flex items-center justify-between border-b border-gray-800 pb-4 mb-4 gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-gray-950 font-black text-xl shadow-lg shadow-amber-500/20">
               {layer1ExaminerReport.overallBand.toFixed(1)}
             </div>
             <div>
-              <div className="flex items-center gap-3">
-                <h3 className="font-bold text-lg text-white">Official IELTS Dual-Layer Assessment Report</h3>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h3 className="font-bold text-lg text-white">Official IELTS Assessment Report</h3>
                 {getStatusBadge()}
               </div>
               <p className="text-xs text-gray-400">
@@ -92,17 +130,48 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Quick Action Export Buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-bold text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all disabled:opacity-50"
+              title="Download Official IELTS Test Report Form as .pdf"
+            >
+              <FileDown className="h-4 w-4" />
+              <span>{isGeneratingPdf ? 'Generating...' : 'Download PDF'}</span>
+            </button>
+
+            <button
+              onClick={handleShareToTelegram}
+              className="px-3 py-1.5 rounded-xl bg-[#229ED9] hover:bg-[#1e8cc0] text-white font-bold text-xs shadow-md shadow-[#229ED9]/25 flex items-center gap-1.5 transition-all"
+              title="Share report to teachers or friends on Telegram"
+            >
+              <Send className="h-4 w-4" />
+              <span>Share to Telegram</span>
+            </button>
+
+            <button
+              onClick={handleCopySummary}
+              className="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 transition-all text-xs font-semibold flex items-center gap-1.5"
+              title="Copy score report summary to clipboard"
+            >
+              {copiedSuccess ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              <span className="hidden sm:inline">{copiedSuccess ? 'Copied!' : 'Copy'}</span>
+            </button>
+
             <button
               onClick={handlePrint}
               className="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 transition-all text-xs font-semibold flex items-center gap-1.5"
+              title="Print via browser dialog"
             >
-              <Download className="h-4 w-4" />
-              <span>Print/PDF</span>
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">Print</span>
             </button>
+
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800"
+              className="text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800 ml-1"
             >
               <X className="h-5 w-5" />
             </button>
@@ -297,7 +366,42 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
 
         </div>
 
+        {/* Footer Actions Strip */}
+        <div className="border-t border-gray-800 pt-4 mt-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-xs text-gray-400 flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-amber-400" />
+            <span>Assessment certified by Official Senior IELTS Examiner Engine</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all disabled:opacity-50"
+            >
+              <FileDown className="h-4 w-4" />
+              <span>{isGeneratingPdf ? 'Preparing PDF...' : 'Download Official PDF'}</span>
+            </button>
+
+            <button
+              onClick={handleShareToTelegram}
+              className="px-4 py-2 rounded-xl bg-[#229ED9] hover:bg-[#1e8cc0] text-white font-bold text-xs shadow-md shadow-[#229ED9]/25 flex items-center gap-1.5 transition-all"
+            >
+              <Send className="h-4 w-4" />
+              <span>Share to Telegram</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 font-semibold text-xs transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );
 };
+

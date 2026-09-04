@@ -69,6 +69,14 @@ Key Differentiators:
     - Socratic Mentorship: Prompts must remain conceptual and instructional.
     - Non-Modal UI: Suggestions appear in a collapsible side panel or subtle gutter indicators, keeping the primary editor clean.
 
+3.6 Anti-Paste & Learning Integrity Protection
+    - Pedagogical Rationale: Copy-pasting pre-written essays, AI outputs, or external text undermines authentic skill development, test-day writing speed, and cognitive vocabulary recall.
+    - Active Enforcement:
+        * Intercepts and strictly prevents `paste` events in the primary editor.
+        * Intercepts and blocks drag-and-drop text injection.
+        * Displays an animated, non-blocking pedagogical notification explaining that direct typing is required.
+        * Displays an "Anti-Paste Guard Active" indicator in the live metrics bar.
+
 
 ================================================================================
 4. PHASE 3: FINAL SUBMISSION & DUAL-LAYER ASSESSMENT
@@ -92,6 +100,11 @@ Upon clicking "Submit Task", the platform processes the essay through an expert 
         * Evaluates propriety of user's writing relative to the target chosen during drafting.
     - Actionable Roadmaps: Focus areas for the next writing task to bridge gaps toward the target score.
 
+4.3 Official PDF Export & Telegram Community Sharing
+    - Official-Grade PDF Download: One-click generation of client-side vector `.pdf` Test Report Forms featuring overall band, 4-criteria breakdown, examiner synthesis, roadmap, and essay transcript.
+    - Instant Telegram Sharing: Formatted Telegram message payload (`https://t.me/share/url`) allowing test-takers to immediately share results with their teachers, groupmates, or study peers.
+    - One-Click Summary Copy: Instant clipboard export for WhatsApp, Discord, or email submission.
+
 
 ================================================================================
 5. BUSINESS & PEDAGOGICAL RULES SUMMARY
@@ -101,4 +114,5 @@ Upon clicking "Submit Task", the platform processes the essay through an expert 
 2. Cognitive Flow Protection: No pop-up modals or blocking overlays while typing; active feedback must be delivered asynchronously.
 3. Skill-Building Integrity: The AI assists without doing the work. Direct sentence generation is strictly prohibited during live drafting.
 4. User Autonomy: Live feedback can be toggled off at any moment, shifting seamlessly into exam conditions.
+5. Anti-Paste Learning Discipline: Pasting is disabled in the practice canvas to ensure real test-day fluency, muscle memory, and genuine vocabulary retention.
 ================================================================================

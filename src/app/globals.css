@@ -69,3 +69,32 @@ body {
 .animate-glow {
   animation: glow-subtle 4s ease-in-out infinite;
 }
+
+/* Print optimization styles */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  header, nav, .no-print {
+    display: none !important;
+  }
+
+  .glass-panel, .glass-card {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    color: #0f172a !important;
+  }
+
+  .text-white {
+    color: #0f172a !important;
+  }
+
+  .text-gray-300, .text-gray-400 {
+    color: #334155 !important;
+  }
+}
