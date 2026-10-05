@@ -79,7 +79,7 @@ export async function generateSubmissionEvaluation(req: EvaluationRequest): Prom
 // PEDAGOGICAL SOCRATIC GUIDANCE MOCK ENGINE (Complies with Rule 3.5 & Guardrails)
 // --------------------------------------------------------------------------------
 
-function generateMockSocraticGuidance(essayText: string, targetBand: TargetBand, prompt: IELTSTaskPrompt): RealtimeGuidanceResponse {
+export function generateMockSocraticGuidance(essayText: string, targetBand: TargetBand, prompt: IELTSTaskPrompt): RealtimeGuidanceResponse {
   const paragraphs = essayText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
   const targetNum = parseFloat(targetBand);
   const wordCount = essayText.trim().split(/\s+/).filter(Boolean).length;
@@ -226,7 +226,7 @@ function generateMockSocraticGuidance(essayText: string, targetBand: TargetBand,
 // DUAL-LAYER EXAMINER EVALUATION MOCK ENGINE (Complies with Section 4)
 // --------------------------------------------------------------------------------
 
-function generateMockSubmissionEvaluation(
+export function generateMockSubmissionEvaluation(
   essayText: string,
   targetBand: TargetBand,
   prompt: IELTSTaskPrompt,
@@ -269,6 +269,145 @@ function generateMockSubmissionEvaluation(
   else if (overallBand < targetNum) targetStatus = 'TARGET_NOT_MET';
 
   const paragraphs = essayText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+  const wordDeficit = Math.max(0, prompt.minWordCount - words);
+
+  // 1. Dynamic Lexical Upgrade Mining: Find candidate phrases or weak words from text
+  const lexicalOpportunities = [
+    {
+      keywords: ['common concerns', 'concern', 'worried', 'worry'],
+      originalPhrase: textLower.includes('common concerns') ? 'common concerns' : 'concerns',
+      suggestedCollocations: ['a pervasive apprehension', 'escalating pedagogical debate', 'widespread societal unease'],
+      pedagogicalContext: 'Replace informal noun combinations with high-register academic collocations that establish objective examiner authority.'
+    },
+    {
+      keywords: ['spreading across', 'spreading', 'spread', 'all over'],
+      originalPhrase: textLower.includes('spreading across') ? 'spreading across' : 'spreading',
+      suggestedCollocations: ['proliferating across international systems', 'permeating modern society', 'transcending jurisdictional boundaries'],
+      pedagogicalContext: 'Upgrade general transitive verbs with precise academic verbs indicating rapid diffusion or systemic adoption.'
+    },
+    {
+      keywords: ['world education', 'education', 'school', 'schools', 'student', 'students'],
+      originalPhrase: textLower.includes('world education') ? 'world education' : 'education',
+      suggestedCollocations: ['contemporary pedagogical paradigms', 'institutional academic curricula', 'holistic educational frameworks'],
+      pedagogicalContext: 'Elevate references to schooling by employing academic terminology specific to curriculum design and pedagogy.'
+    },
+    {
+      keywords: ['important', 'big', 'good', 'helpful', 'useful'],
+      originalPhrase: textLower.includes('important') ? 'important' : textLower.includes('good') ? 'good' : 'helpful',
+      suggestedCollocations: ['of paramount significance', 'indispensable to cognitive development', 'profoundly advantageous'],
+      pedagogicalContext: 'Replace overused qualitative adjectives with high-register prepositional phrases or specialized evaluative adjectives.'
+    },
+    {
+      keywords: ['people think', 'they think', 'people believe', 'some say', 'people say'],
+      originalPhrase: textLower.includes('people think') ? 'people think' : 'some people say',
+      suggestedCollocations: ['proponents vehemently argue', 'critics contend', 'a prominent school of thought posits'],
+      pedagogicalContext: 'Deploy formal academic attribution verbs rather than conversational phrasing like "people think".'
+    },
+    {
+      keywords: ['problem', 'trouble', 'bad', 'negative'],
+      originalPhrase: textLower.includes('problem') ? 'problem' : 'negative consequences',
+      suggestedCollocations: ['an acute dilemma', 'detrimental ramifications', 'systemic impediments'],
+      pedagogicalContext: 'Specify the structural or societal impact of the issue rather than relying on generic words like "problem".'
+    }
+  ];
+
+  // Pick matched lexical items, or construct from candidate's first sentences
+  const matchedLexical = lexicalOpportunities.filter(item =>
+    item.keywords.some(k => textLower.includes(k))
+  );
+
+  const fallbackLexicalSnippet = essayText.slice(0, 40).replace(/["\n]/g, '').trim() || 'basic topic terminology';
+  const lexicalUpgrades = matchedLexical.length >= 2
+    ? matchedLexical.slice(0, 3)
+    : [
+        ...matchedLexical,
+        {
+          originalPhrase: `"${fallbackLexicalSnippet}..."`,
+          suggestedCollocations: ['substantive scholarly discourse', 'empirical methodologies', 'salient socio-economic factors'],
+          pedagogicalContext: 'Enrich domain-specific vocabulary related to this prompt with academic collocations targeting Band 7.5+ Lexical Resource.'
+        },
+        {
+          originalPhrase: 'qualitative claims (e.g. good / important)',
+          suggestedCollocations: ['of paramount significance', 'exerts a profound influence', 'warrants critical examination'],
+          pedagogicalContext: 'Use analytical verb-phrase collocations to articulate your thesis with academic precision.'
+        }
+      ].slice(0, 3);
+
+  // 2. Concrete Grammar Boosters Tailored to Prompt & Essay
+  const topicTheme = prompt.title.toLowerCase();
+  const grammarBoosters = [
+    {
+      structureType: 'Inverted Conditional (GRA Band 8.0)',
+      syntacticPattern: 'Were + [Subject] + to [Verb]..., [Subject] + would [Verb]...',
+      tailoredExample: topicTheme.includes('tech')
+        ? 'Were policymakers to integrate algorithmic education into school curricula, students would develop far more resilient critical faculties.'
+        : 'Were educational authorities to prioritize experiential problem-solving over rote memorization, graduates would adapt far more effectively to workplace realities.',
+      examinerRationale: 'Inverted hypothetical conditions display syntactic flexibility and stylistic variety, directly satisfying the Band 8.0 GRA criteria for complex structures.'
+    },
+    {
+      structureType: 'Fronted Concessive Subordination (GRA Band 7.5)',
+      syntacticPattern: 'While / Although [Counter-Perspective], evidence overwhelmingly demonstrates that [Core Claim]...',
+      tailoredExample: topicTheme.includes('tech')
+        ? 'While digital tools undeniably enhance classroom interactivity, unmoderated screen exposure risks undermining sustained cognitive focus.'
+        : 'While standardized examinations provide standardized benchmarks, empirical evidence demonstrates that continuous formative assessment produces more equitable outcomes.',
+      examinerRationale: 'Examiners reward complex subordinating conjunctions that balance opposing viewpoints while maintaining precise grammatical control.'
+    }
+  ];
+
+  // 3. Dynamic Structural Diagnosis
+  const structuralDiagnosis = {
+    wordCountAudit: {
+      submitted: words,
+      required: prompt.minWordCount,
+      difference: prompt.minWordCount - words,
+      status: (words < prompt.minWordCount ? 'UNDER_LENGTH' : words > prompt.minWordCount + 150 ? 'EXCESSIVE' : 'OPTIMAL') as 'OPTIMAL' | 'UNDER_LENGTH' | 'EXCESSIVE',
+      penaltyWarning: words < prompt.minWordCount
+        ? `Deficit of ${prompt.minWordCount - words} words. Essays under ${prompt.minWordCount} words automatically incur a penalty in Task Achievement (Band 5.0–6.0 ceiling).`
+        : undefined
+    },
+    paragraphCountAudit: {
+      detected: paragraphs.length,
+      recommended: 4,
+      breakdownNote: paragraphs.length === 1
+        ? 'Single continuous paragraph detected. IELTS examiners require 4 distinct paragraphs (Introduction, 2 Body Paragraphs, and Conclusion) to award Band 6.0+ in Coherence & Cohesion.'
+        : paragraphs.length < 4
+        ? `${paragraphs.length} paragraphs detected. IELTS essays require a 4-paragraph structure with clear line breaks between sections.`
+        : 'Standard 4-paragraph structure detected with clear topical separation.'
+    },
+    recommendedBlueprint: [
+      `Paragraph 1 (Introduction, ~35-45 words): Paraphrase "${prompt.title}" and clearly state your overarching thesis statement.`,
+      `Paragraph 2 (Body Paragraph 1, ~90 words): Present your primary argument using the PEEL method (Point, Explanation, Evidence, Link).`,
+      `Paragraph 3 (Body Paragraph 2, ~90 words): Address the counter-perspective or secondary argument with concrete real-world illustration.`,
+      `Paragraph 4 (Conclusion, ~30-40 words): Synthesize both perspectives and reiterate your stance without introducing new unargued points.`
+    ]
+  };
+
+  // 4. Dynamic Actionable Roadmap Tailored to Candidate Draft
+  const dynamicRoadmap: string[] = [];
+
+  if (words < prompt.minWordCount) {
+    dynamicRoadmap.push(
+      `Word-Count Expansion (+${wordDeficit} words): Your draft has ${words} words (minimum ${prompt.minWordCount}). Expand your arguments using the PEEL framework to add ~${Math.ceil(wordDeficit / (paragraphs.length || 1))} words per paragraph and eliminate the under-length penalty.`
+    );
+  }
+
+  if (paragraphs.length === 1) {
+    dynamicRoadmap.push(
+      `Paragraph Division: Split your single-paragraph text into 4 clear sections: Introduction, Body Paragraph 1, Body Paragraph 2, and Conclusion. In IELTS, essays without paragraph breaks cannot score above Band 5 for Coherence & Cohesion.`
+    );
+  } else if (paragraphs.length < 4) {
+    dynamicRoadmap.push(
+      `Expand Essay Architecture: Add ${4 - paragraphs.length} more paragraph(s) to establish a distinct 4-paragraph IELTS format (Intro, 2 Body Paragraphs, Conclusion).`
+    );
+  }
+
+  dynamicRoadmap.push(
+    `Lexical Upgrade: Replace basic phrasing such as "${lexicalUpgrades[0].originalPhrase}" with Band 7.5+ academic collocations like "${lexicalUpgrades[0].suggestedCollocations[0]}" or "${lexicalUpgrades[0].suggestedCollocations[1]}".`
+  );
+
+  dynamicRoadmap.push(
+    `Syntactic Diversity: Insert one inverted conditional sentence (${grammarBoosters[0].syntacticPattern}) into your main body paragraph to demonstrate Band 8.0 grammatical range.`
+  );
 
   const paragraphAudits = paragraphs.map((p, idx) => {
     const pLen = p.trim().split(/\s+/).length;
@@ -304,29 +443,43 @@ function generateMockSubmissionEvaluation(
       overallBand,
       taskResponse: {
         score: taScore,
-        commentary: `The response addresses all key prompts of "${prompt.title}". Main points are extended with relevant arguments.`,
-        keyStrengths: words >= prompt.minWordCount ? [`Exceeds minimum word count threshold (${words} / ${prompt.minWordCount} words)`] : ['Addressed central prompt position clearly'],
-        keyWeaknesses: words < prompt.minWordCount ? [`Below required minimum word count (${words} / ${prompt.minWordCount} words)`] : ['Could further elaborate on second main body paragraph']
+        commentary: words < prompt.minWordCount
+          ? `The response touches upon "${prompt.title}", but fails to reach the required minimum of ${prompt.minWordCount} words (${words} words submitted). Ideas lack full extension.`
+          : `The response addresses key aspects of "${prompt.title}". Main ideas are presented and extended.`,
+        keyStrengths: words >= prompt.minWordCount
+          ? [`Exceeds minimum word count threshold (${words} / ${prompt.minWordCount} words)`]
+          : ['Maintains direct thematic relevance to the prompt'],
+        keyWeaknesses: words < prompt.minWordCount
+          ? [`Critical under-length deficit: ${words} / ${prompt.minWordCount} words (incurs Task Achievement penalty)`]
+          : paragraphs.length === 1
+          ? ['Lack of paragraph division restricts argument development']
+          : ['Supporting examples could be developed with greater depth']
       },
       coherenceCohesion: {
-        score: ccScore,
-        commentary: OFFICIAL_IELTS_RUBRICS[ccScore.toFixed(1) as TargetBand]?.coherenceCohesion || 'Clear paragraphing with logical progression.',
-        keyStrengths: ['Logical paragraph progression throughout', 'Clear topic sentence structures'],
-        keyWeaknesses: ['Slight over-reliance on explicit cohesive markers']
+        score: paragraphs.length === 1 ? Math.min(ccScore, 5.5) : ccScore,
+        commentary: paragraphs.length === 1
+          ? 'Single continuous paragraph restricts logical organization. IELTS rubrics require distinct paragraphing.'
+          : (OFFICIAL_IELTS_RUBRICS[ccScore.toFixed(1) as TargetBand]?.coherenceCohesion || 'Clear paragraphing with logical progression.'),
+        keyStrengths: paragraphs.length > 1
+          ? ['Logical paragraph progression throughout', 'Clear topic sentence structures']
+          : ['Sentences within the paragraph maintain coherent thematic focus'],
+        keyWeaknesses: paragraphs.length === 1
+          ? ['Absence of paragraph breaks severely impacts discourse flow']
+          : ['Could utilize more varied referential devices']
       },
       lexicalResource: {
         score: lrScore,
         commentary: OFFICIAL_IELTS_RUBRICS[lrScore.toFixed(1) as TargetBand]?.lexicalResource || 'Sufficient range of academic vocabulary.',
-        keyStrengths: ['Effective usage of task-appropriate vocabulary', 'Demonstrates academic register'],
-        keyWeaknesses: ['Occasional minor word choice inaccuracies in complex collocations']
+        keyStrengths: ['Task-relevant vocabulary demonstrated in central discussion', 'Academic tone maintained'],
+        keyWeaknesses: [`Simplistic word combinations (e.g. "${lexicalUpgrades[0].originalPhrase}") should be elevated to Band 7.5+ collocations`]
       },
       grammaticalAccuracy: {
         score: graScore,
         commentary: OFFICIAL_IELTS_RUBRICS[graScore.toFixed(1) as TargetBand]?.grammaticalAccuracy || 'Mix of simple and complex sentence forms.',
-        keyStrengths: ['Frequent error-free simple and compound sentences', 'Good punctuation control'],
-        keyWeaknesses: ['Minor slips in complex clause subordination']
+        keyStrengths: ['Good sentence-level clarity and control of basic punctuation'],
+        keyWeaknesses: ['Needs more advanced syntactic structures (such as inversions and fronted concessive clauses) to reach Band 7.5+']
       },
-      examinerSummary: `Official IELTS Examiner Assessment yields an Overall Writing Band Score of ${overallBand.toFixed(1)}. The essay exhibits strong structure and clear position development.`
+      examinerSummary: `Official IELTS Examiner Assessment yields an Overall Writing Band Score of ${overallBand.toFixed(1)}. While the central topic is acknowledged, addressing the ${words < prompt.minWordCount ? 'word count deficit' : 'structural paragraphing'} and incorporating high-level collocations are essential to reach Target Band ${targetBand}.`
     },
 
     layer2AlignmentReport: {
@@ -335,15 +488,16 @@ function generateMockSubmissionEvaluation(
       achievedBand: overallBand,
       paragraphAudits,
       gapAnalysis: targetStatus === 'TARGET_ACHIEVED'
-        ? `Your submission meets the rigorous requirements for Band ${targetBand}! Your structural breakdown and lexical range match official expectations.`
+        ? `Your submission meets the requirements for Band ${targetBand}! Your structural execution and vocabulary range match official expectations.`
         : targetStatus === 'EXCEEDED_TARGET'
-        ? `Congratulations! Your writing scored ${overallBand.toFixed(1)}, exceeding your target of Band ${targetBand}. Consider setting your target band higher for your next session!`
-        : `Your submission scored ${overallBand.toFixed(1)}, falling short of your Target Band ${targetBand}. Key areas to bridge include deeper argument expansion and more varied cohesive markers.`,
-      actionableRoadmap: [
-        `Focus on expanding main supporting ideas in Body Paragraph 2 with concrete examples.`,
-        `Incorporate 2–3 sophisticated Cause & Effect collocations to elevate Lexical Resource to Band ${targetBand}.`,
-        `Maintain active practice in ${mode === 'ACTIVE_ASSISTANT' ? 'Focus Exam Mode' : 'Active Assistant Mode'} to build timed execution skills.`
-      ]
+        ? `Congratulations! Your writing scored ${overallBand.toFixed(1)}, exceeding your target of Band ${targetBand}. You are ready to target Band ${(overallBand + 0.5).toFixed(1)}.`
+        : `Your submission scored ${overallBand.toFixed(1)}, falling short of your Target Band ${targetBand}. Primary gaps: ${words < prompt.minWordCount ? `a ${wordDeficit}-word deficit, ` : ''}${paragraphs.length === 1 ? 'single-paragraph structuring, ' : ''}and the need for Band 7.5+ collocations and complex sentence inversions.`,
+      actionableRoadmap: dynamicRoadmap,
+      specificRecommendations: {
+        structuralDiagnosis,
+        lexicalUpgrades,
+        grammarBoosters
+      }
     }
   };
 }

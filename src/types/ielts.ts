@@ -59,6 +59,41 @@ export interface ParagraphAlignmentAudit {
   analysis: string;
 }
 
+export interface LexicalUpgradeItem {
+  originalPhrase: string;
+  suggestedCollocations: string[];
+  pedagogicalContext: string;
+}
+
+export interface GrammarBoosterItem {
+  structureType: string;
+  syntacticPattern: string;
+  tailoredExample: string;
+  examinerRationale: string;
+}
+
+export interface StructuralDiagnosis {
+  wordCountAudit: {
+    submitted: number;
+    required: number;
+    difference: number;
+    status: 'OPTIMAL' | 'UNDER_LENGTH' | 'EXCESSIVE';
+    penaltyWarning?: string;
+  };
+  paragraphCountAudit: {
+    detected: number;
+    recommended: number;
+    breakdownNote: string;
+  };
+  recommendedBlueprint: string[];
+}
+
+export interface SpecificRecommendations {
+  structuralDiagnosis: StructuralDiagnosis;
+  lexicalUpgrades: LexicalUpgradeItem[];
+  grammarBoosters: GrammarBoosterItem[];
+}
+
 export interface TargetAlignmentReport {
   targetStatus: TargetAlignmentStatus;
   selectedTargetBand: TargetBand;
@@ -66,6 +101,7 @@ export interface TargetAlignmentReport {
   paragraphAudits: ParagraphAlignmentAudit[];
   gapAnalysis: string;
   actionableRoadmap: string[];
+  specificRecommendations?: SpecificRecommendations;
 }
 
 export interface SubmissionReport {

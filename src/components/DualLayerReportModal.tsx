@@ -21,7 +21,10 @@ import {
   Send,
   Copy,
   Check,
-  Printer
+  Printer,
+  BookOpen,
+  Zap,
+  ArrowRight
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateIELTSReportPDF, generateTelegramShareData } from '@/lib/pdf-service';
@@ -297,22 +300,211 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
 
           {/* LAYER 2 VIEW */}
           {activeTab === 'LAYER_2' && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               
               {/* Gap Analysis Summary Banner */}
-              <div className="p-5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 space-y-2">
-                <div className="flex items-center justify-between">
+              <div className="p-5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
                     <Target className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                    Target Alignment Audit (Selected: Band {targetBandAtSubmission})
+                    Target Alignment Audit (Target: Band {targetBandAtSubmission} vs Achieved: Band {layer1ExaminerReport.overallBand.toFixed(1)})
                   </h4>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                    layer2AlignmentReport.targetStatus === 'TARGET_ACHIEVED'
+                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                      : layer2AlignmentReport.targetStatus === 'EXCEEDED_TARGET'
+                      ? 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30'
+                      : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                  }`}>
+                    {layer2AlignmentReport.targetStatus === 'TARGET_ACHIEVED' ? 'Target Met' : layer2AlignmentReport.targetStatus === 'EXCEEDED_TARGET' ? 'Target Exceeded' : 'Target Not Met'}
+                  </span>
                 </div>
-                <p className="text-xs text-slate-700 dark:text-gray-200 leading-relaxed">
+                <p className="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">
                   {layer2AlignmentReport.gapAnalysis}
                 </p>
               </div>
 
-              {/* Paragraph-by-Paragraph Alignment Audit Table */}
+              {/* 1. Structural & Word-Count Diagnostic */}
+              {layer2AlignmentReport.specificRecommendations?.structuralDiagnosis && (
+                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-800 space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      Structural & Word-Count Diagnostic
+                    </h4>
+                    <span className="text-[11px] font-medium text-slate-500 dark:text-gray-400">
+                      IELTS Standard Structure Audit
+                    </span>
+                  </div>
+
+                  {/* Word Count & Paragraph Stats Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Word Count Metric */}
+                    <div className="p-3 rounded-xl bg-white dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700/60 flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Submission Length</div>
+                        <div className="text-base font-extrabold text-slate-900 dark:text-white flex items-baseline gap-1.5">
+                          <span>{layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.submitted}</span>
+                          <span className="text-xs font-normal text-slate-500 dark:text-gray-400">/ {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.required} min words</span>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
+                        layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.status === 'OPTIMAL'
+                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                      }`}>
+                        {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.status === 'OPTIMAL' ? 'Meets Threshold' : `Short (-${layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.difference}w)`}
+                      </span>
+                    </div>
+
+                    {/* Paragraph Count Metric */}
+                    <div className="p-3 rounded-xl bg-white dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700/60 flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Paragraph Architecture</div>
+                        <div className="text-base font-extrabold text-slate-900 dark:text-white flex items-baseline gap-1.5">
+                          <span>{layer2AlignmentReport.specificRecommendations.structuralDiagnosis.paragraphCountAudit.detected}</span>
+                          <span className="text-xs font-normal text-slate-500 dark:text-gray-400">/ {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.paragraphCountAudit.recommended} recommended</span>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
+                        layer2AlignmentReport.specificRecommendations.structuralDiagnosis.paragraphCountAudit.detected >= 4
+                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                      }`}>
+                        {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.paragraphCountAudit.detected >= 4 ? 'Standard Layout' : 'Needs Division'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Warning message if under-length or single-paragraph */}
+                  {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.penaltyWarning && (
+                    <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-rose-900 dark:text-rose-300 text-xs flex items-start gap-2.5">
+                      <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Task Achievement Penalty Warning: </span>
+                        <span>{layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.penaltyWarning}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Paragraph Structure Breakdown Note */}
+                  <div className="text-xs text-slate-600 dark:text-gray-300 bg-white dark:bg-gray-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-gray-800 space-y-2">
+                    <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <BookOpen className="h-3.5 w-3.5 text-blue-500" /> Recommended 4-Paragraph Blueprint:
+                    </p>
+                    <ul className="space-y-1.5 text-[11px] text-slate-600 dark:text-gray-300">
+                      {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.recommendedBlueprint.map((step, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-blue-500 font-bold shrink-0 mt-0.5">•</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Target Band Lexical & Collocation Upgrades */}
+              {layer2AlignmentReport.specificRecommendations?.lexicalUpgrades && layer2AlignmentReport.specificRecommendations.lexicalUpgrades.length > 0 && (
+                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-800 space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      Target Band 7.5–9.0 Lexical & Collocation Upgrades
+                    </h4>
+                    <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                      Grounded in Your Draft
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-gray-300">
+                    Replace simplistic or informal phrasing identified in your essay with examiner-preferred academic collocations:
+                  </p>
+
+                  <div className="space-y-3">
+                    {layer2AlignmentReport.specificRecommendations.lexicalUpgrades.map((item, idx) => (
+                      <div key={idx} className="p-3.5 rounded-xl bg-white dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700/60 space-y-2.5">
+                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">In Your Text:</span>
+                          <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-gray-700 text-slate-800 dark:text-gray-200 font-semibold italic text-[11px]">
+                            &ldquo;{item.originalPhrase}&rdquo;
+                          </span>
+                          <ArrowRight className="h-3.5 w-3.5 text-purple-500" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">High-Band Alternatives:</span>
+                        </div>
+
+                        {/* Collocation Badges */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {item.suggestedCollocations.map((colloc, cIdx) => (
+                            <span
+                              key={cIdx}
+                              className="px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-200 font-bold text-xs border border-purple-200 dark:border-purple-800/50 shadow-sm"
+                            >
+                              {colloc}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Pedagogical context */}
+                        <p className="text-[11px] text-slate-500 dark:text-gray-400 italic">
+                          💡 <span className="font-semibold text-slate-700 dark:text-gray-300">Examiner Advice:</span> {item.pedagogicalContext}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Target Band Grammatical Variety Boosters */}
+              {layer2AlignmentReport.specificRecommendations?.grammarBoosters && layer2AlignmentReport.specificRecommendations.grammarBoosters.length > 0 && (
+                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-800 space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                      Grammatical Range & Accuracy (GRA) Score Boosters
+                    </h4>
+                    <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                      Target Band 7.5+ Syntactic Forms
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-gray-300">
+                    To reach Band 7.5–8.5 in Grammatical Range, master these complex sentence structures tailored to this essay topic:
+                  </p>
+
+                  <div className="space-y-3">
+                    {layer2AlignmentReport.specificRecommendations.grammarBoosters.map((booster, bIdx) => (
+                      <div key={bIdx} className="p-3.5 rounded-xl bg-white dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700/60 space-y-2 text-xs">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <span className="h-4 w-4 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 font-extrabold text-[10px] flex items-center justify-center">
+                              {bIdx + 1}
+                            </span>
+                            {booster.structureType}
+                          </span>
+                        </div>
+
+                        {/* Pattern formula */}
+                        <div className="p-2 rounded-lg bg-slate-100 dark:bg-gray-900 text-slate-800 dark:text-gray-200 font-mono text-[11px] border border-slate-200 dark:border-gray-700/80">
+                          <span className="text-slate-500 dark:text-gray-400 font-sans font-medium">Syntactic Pattern: </span>
+                          {booster.syntacticPattern}
+                        </div>
+
+                        {/* Topic-tailored example */}
+                        <div className="p-2.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 text-slate-800 dark:text-gray-200 text-xs">
+                          <span className="font-bold text-amber-800 dark:text-amber-400">Tailored Example for This Topic: </span>
+                          <span className="italic font-medium">&ldquo;{booster.tailoredExample}&rdquo;</span>
+                        </div>
+
+                        {/* Examiner Rationale */}
+                        <p className="text-[11px] text-slate-500 dark:text-gray-400">
+                          🎯 <span className="font-semibold text-slate-700 dark:text-gray-300">Why examiners award this:</span> {booster.examinerRationale}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. Paragraph-by-Paragraph Alignment Audit Table */}
               <div className="space-y-3">
                 <h4 className="font-bold text-xs text-slate-700 dark:text-gray-300 uppercase tracking-wider">Paragraph Alignment Breakdown</h4>
                 <div className="space-y-2">
@@ -343,19 +535,19 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
                 </div>
               </div>
 
-              {/* Actionable Improvement Roadmap */}
-              <div className="p-5 rounded-xl glass-card space-y-3 border-l-4 border-l-brand-500">
+              {/* 5. Dynamic Actionable Improvement Roadmap */}
+              <div className="p-5 rounded-2xl glass-card space-y-3 border-l-4 border-l-brand-500">
                 <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <ListOrdered className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                   Actionable Gap-Bridging Roadmap for Next Session
                 </h4>
-                <ul className="space-y-2 text-xs text-slate-600 dark:text-gray-300">
+                <ul className="space-y-2.5 text-xs text-slate-600 dark:text-gray-300">
                   {layer2AlignmentReport.actionableRoadmap.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-2.5">
                       <span className="h-5 w-5 rounded-full bg-brand-500/20 text-brand-700 dark:text-brand-300 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
                         {idx + 1}
                       </span>
-                      <span>{item}</span>
+                      <span className="leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>

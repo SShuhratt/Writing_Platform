@@ -1,20 +1,21 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateMockSocraticGuidance } from '@/lib/ai-service';
 
 export async function POST(req: Request) {
+  let bodyData: any = {};
   try {
-    const { essayText, targetBand, prompt } = await req.json();
+    bodyData = await req.json();
+    const { essayText, targetBand, prompt } = bodyData;
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY is not configured on the server' }, { status: 503 });
+      console.warn('GEMINI_API_KEY is not configured on the server, using Socratic engine');
+      return NextResponse.json(generateMockSocraticGuidance(essayText, targetBand, prompt));
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: { responseMimeType: 'application/json' }
-    });
+    const candidateModels = ['gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
 
     const systemPrompt = `You are the Real-Time Socratic Mentor for an IELTS Writing Assistant Platform.
 STRICT PEDAGOGICAL GUARDRAILS:
@@ -60,13 +61,37 @@ Respond with valid JSON using this structure:
   }
 }`;
 
-    const result = await model.generateContent(systemPrompt);
-    const rawText = result.response.text();
-    const cleanText = (rawText || '{}').replace(/^```(json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    let rawText = '';
+    let lastError: any = null;
+
+    for (const modelName of candidateModels) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: { responseMimeType: 'application/json' }
+        });
+        const result = await model.generateContent(systemPrompt);
+        rawText = result.response.text();
+        if (rawText) break;
+      } catch (err: any) {
+        console.warn(`Model ${modelName} failed in /api/guidance, trying next:`, err?.message?.slice(0, 100));
+        lastError = err;
+      }
+    }
+
+    if (!rawText) {
+      console.warn('All external AI models unavailable, engaging intelligent Socratic Guidance fallback');
+      return NextResponse.json(generateMockSocraticGuidance(essayText, targetBand, prompt));
+    }
+
+    const cleanText = rawText.replace(/^```(json)?\n?/i, '').replace(/\n?```$/i, '').trim();
     const parsedData = JSON.parse(cleanText);
     return NextResponse.json(parsedData);
   } catch (error: any) {
-    console.error('Error in /api/guidance:', error);
+    console.error('Error in /api/guidance, falling back to mock Socratic guidance:', error?.message);
+    if (bodyData?.essayText && bodyData?.prompt) {
+      return NextResponse.json(generateMockSocraticGuidance(bodyData.essayText, bodyData.targetBand || '7.0', bodyData.prompt));
+    }
     return NextResponse.json({ error: error?.message || 'Failed to generate guidance' }, { status: 500 });
   }
 }

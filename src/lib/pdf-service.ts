@@ -389,6 +389,74 @@ export function generateIELTSReportPDF(report: SubmissionReport, candidateName?:
     cursorY += paraHeight + 2.5;
   });
 
+  // --- PEDAGOGICAL TARGET BAND RECOMMENDATIONS SECTION ---
+  const recs = report.layer2AlignmentReport.specificRecommendations;
+  if (recs) {
+    cursorY += 4;
+    checkPageBreak(35);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text('EXAMINER-RECOMMENDED HIGH-IMPACT IMPROVEMENTS', margin, cursorY);
+    cursorY += 5;
+
+    // Lexical Upgrades Section
+    if (recs.lexicalUpgrades && recs.lexicalUpgrades.length > 0) {
+      checkPageBreak(25);
+      doc.setFillColor(243, 232, 255); // purple-100
+      doc.rect(margin, cursorY, contentWidth, 6, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(107, 33, 168); // purple-800
+      doc.text('TARGET BAND 7.5–9.0 LEXICAL UPGRADES (GROUNDED IN YOUR DRAFT):', margin + 3, cursorY + 4.2);
+      cursorY += 8;
+
+      recs.lexicalUpgrades.forEach((item) => {
+        checkPageBreak(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text(`• In Text: "${item.originalPhrase}" ➔ Upgrade: ${item.suggestedCollocations.join(', ')}`, margin + 3, cursorY);
+        cursorY += 4;
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(6.8);
+        doc.setTextColor(100, 116, 139);
+        const adviceLines = doc.splitTextToSize(item.pedagogicalContext, contentWidth - 8);
+        doc.text(adviceLines[0] || item.pedagogicalContext, margin + 5, cursorY);
+        cursorY += 5.5;
+      });
+    }
+
+    // Grammatical Variety Boosters
+    if (recs.grammarBoosters && recs.grammarBoosters.length > 0) {
+      cursorY += 2;
+      checkPageBreak(25);
+      doc.setFillColor(254, 243, 199); // amber-100
+      doc.rect(margin, cursorY, contentWidth, 6, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(146, 64, 14); // amber-800
+      doc.text('GRAMMATICAL RANGE BOOSTERS (TARGET SYNTAX PATTERNS):', margin + 3, cursorY + 4.2);
+      cursorY += 8;
+
+      recs.grammarBoosters.forEach((b) => {
+        checkPageBreak(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text(`• ${b.structureType} [Pattern: ${b.syntacticPattern}]`, margin + 3, cursorY);
+        cursorY += 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(71, 85, 105);
+        const exLines = doc.splitTextToSize(`Model: "${b.tailoredExample}"`, contentWidth - 8);
+        doc.text(exLines.slice(0, 2), margin + 5, cursorY);
+        cursorY += (exLines.length * 3.5) + 3;
+      });
+    }
+  }
+
   // Footer Certificate Seal on Bottom of Page
   checkPageBreak(12);
   doc.setFont('helvetica', 'italic');
@@ -424,6 +492,15 @@ export function generateTelegramShareData(report: SubmissionReport, candidateNam
 
   const appUrl = 'https://writing-platform-git-main-sshuhratts-projects.vercel.app/workspace';
 
+  const topRoadmap = report.layer2AlignmentReport.actionableRoadmap[0] || 'Expand argument depth';
+  const recs = report.layer2AlignmentReport.specificRecommendations;
+  const topLex = recs?.lexicalUpgrades?.[0]
+    ? `\n✨ *Lexical Upgrade:* "${recs.lexicalUpgrades[0].originalPhrase}" ➔ ${recs.lexicalUpgrades[0].suggestedCollocations.slice(0, 2).join(', ')}`
+    : '';
+  const topGra = recs?.grammarBoosters?.[0]
+    ? `\n⚡ *Grammar Target:* ${recs.grammarBoosters[0].structureType}`
+    : '';
+
   const shareText = `🎓 *IELTS Writing Assessment Result*
 ━━━━━━━━━━━━━━━━━━━━
 👤 *Candidate:* ${candidateName || 'Student'}
@@ -439,6 +516,9 @@ ${statusEmoji} *Achieved Score:* *Band ${overall}* (${statusLabel})
 
 ✍️ *Length:* ${report.wordCount} words
 ⏱️ *Mode:* ${report.modeAtSubmission === 'ACTIVE_ASSISTANT' ? 'Active Socratic Mentor' : 'Focus Exam Mode'}
+
+📌 *Priority Roadmap Focus:*
+1. ${topRoadmap}${topLex}${topGra}
 ━━━━━━━━━━━━━━━━━━━━
 ✨ *Practice & Assessment on IELTS Mentor:*
 ${appUrl}`;
