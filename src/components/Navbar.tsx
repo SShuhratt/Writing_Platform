@@ -19,7 +19,9 @@ import {
   LogOut,
   ShieldCheck,
   LayoutDashboard,
-  PenTool
+  PenTool,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -43,13 +45,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     geminiApiKey,
     currentUser,
     logout,
-    setAuthModalMode
+    setAuthModalMode,
+    theme,
+    toggleTheme
   } = useWritingStore();
 
   const [hoveredBand, setHoveredBand] = useState<TargetBand | null>(null);
 
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel border-b border-gray-800/80 px-4 py-3">
+    <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-200/80 dark:border-gray-800/80 px-4 py-3">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
         
         {/* Left: Branding & Current Prompt Indicator */}
@@ -60,19 +64,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-white tracking-tight">IELTS Mentor</span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">IELTS Mentor</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 dark:border-brand-500/30">
                   Adaptive AI
                 </span>
               </div>
-              <p className="text-xs text-gray-400">Official-Grade Platform</p>
+              <p className="text-xs text-slate-500 dark:text-gray-400">Official-Grade Platform</p>
             </div>
           </Link>
 
           {isWorkspace && onOpenPromptsModal && (
             <button
               onClick={onOpenPromptsModal}
-              className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-800/80 hover:bg-gray-700/80 text-gray-200 border border-gray-700/60 transition-all"
+              className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-gray-800/80 dark:hover:bg-gray-700/80 text-slate-800 dark:text-gray-200 border border-slate-200 dark:border-gray-700/60 transition-all"
               title="Change IELTS Task Prompt"
             >
               <BookOpen className="h-3.5 w-3.5 text-brand-400" />
@@ -89,9 +93,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-4 flex-wrap justify-center">
             
             {/* Target Band Picker */}
-            <div className="relative group flex items-center gap-2 bg-gray-900/90 p-1.5 rounded-xl border border-gray-800">
-              <div className="flex items-center gap-1.5 px-2 text-xs font-semibold text-gray-300">
-                <Target className="h-3.5 w-3.5 text-amber-400" />
+            <div className="relative group flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 p-1.5 rounded-xl border border-slate-200 dark:border-gray-800">
+              <div className="flex items-center gap-1.5 px-2 text-xs font-semibold text-slate-700 dark:text-gray-300">
+                <Target className="h-3.5 w-3.5 text-amber-500" />
                 <span>Target:</span>
               </div>
 
@@ -105,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
                       targetBand === band
                         ? 'bg-amber-500 text-gray-950 shadow-md shadow-amber-500/30 scale-105'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                        : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-gray-800'
                     }`}
                   >
                     {band}
@@ -115,28 +119,28 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* Rubric Hover Preview Tooltip */}
               {hoveredBand && (
-                <div className="absolute top-full left-0 mt-2 w-80 p-3 rounded-xl bg-gray-900 border border-amber-500/30 shadow-2xl text-xs text-gray-300 z-50 pointer-events-none">
-                  <div className="font-bold text-amber-400 mb-1 flex items-center justify-between">
+                <div className="absolute top-full left-0 mt-2 w-80 p-3 rounded-xl bg-white dark:bg-gray-900 border border-amber-500/40 shadow-2xl text-xs text-slate-700 dark:text-gray-300 z-50 pointer-events-none">
+                  <div className="font-bold text-amber-600 dark:text-amber-400 mb-1 flex items-center justify-between">
                     <span>Band {hoveredBand} Standard</span>
                     <Sparkles className="h-3 w-3" />
                   </div>
-                  <div className="space-y-1.5 text-[11px] text-gray-400">
-                    <p><strong className="text-gray-200">TA/TR:</strong> {OFFICIAL_IELTS_RUBRICS[hoveredBand].taskResponse}</p>
-                    <p><strong className="text-gray-200">CC:</strong> {OFFICIAL_IELTS_RUBRICS[hoveredBand].coherenceCohesion}</p>
-                    <p><strong className="text-gray-200">LR:</strong> {OFFICIAL_IELTS_RUBRICS[hoveredBand].lexicalResource}</p>
+                  <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-gray-400">
+                    <p><strong className="text-slate-900 dark:text-gray-200">TA/TR:</strong> {OFFICIAL_IELTS_RUBRICS[hoveredBand].taskResponse}</p>
+                    <p><strong className="text-slate-900 dark:text-gray-200">CC:</strong> {OFFICIAL_IELTS_RUBRICS[hoveredBand].coherenceCohesion}</p>
+                    <p><strong className="text-slate-900 dark:text-gray-200">LR:</strong> {OFFICIAL_IELTS_RUBRICS[hoveredBand].lexicalResource}</p>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Mode Toggle */}
-            <div className="flex items-center bg-gray-900/90 p-1 rounded-xl border border-gray-800">
+            <div className="flex items-center bg-slate-100 dark:bg-gray-900/90 p-1 rounded-xl border border-slate-200 dark:border-gray-800">
               <button
                 onClick={() => setAssistanceMode('ACTIVE_ASSISTANT')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   assistanceMode === 'ACTIVE_ASSISTANT'
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
-                    : 'text-gray-400 hover:text-gray-200'
+                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-gray-200'
                 }`}
               >
                 <Zap className="h-3.5 w-3.5" />
@@ -148,7 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   assistanceMode === 'FOCUS_EXAM'
                     ? 'bg-rose-600 text-white shadow-md shadow-rose-500/30'
-                    : 'text-gray-400 hover:text-gray-200'
+                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-gray-200'
                 }`}
               >
                 <EyeOff className="h-3.5 w-3.5" />
@@ -157,14 +161,25 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-4 text-xs font-semibold text-gray-300">
-            <Link href="/workspace" className="flex items-center gap-1.5 hover:text-brand-300 transition-colors">
-              <PenTool className="h-4 w-4 text-brand-400" />
-              <span>Practice Workspace</span>
-            </Link>
+          <div className="flex items-center gap-4 text-xs font-semibold">
+            {currentUser ? (
+              <Link href="/workspace" className="flex items-center gap-1.5 text-slate-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-300 transition-colors">
+                <PenTool className="h-4 w-4 text-brand-500" />
+                <span>Practice Workspace</span>
+              </Link>
+            ) : (
+              <button
+                onClick={() => setAuthModalMode('LOGIN')}
+                className="flex items-center gap-1.5 text-slate-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-300 transition-colors"
+                title="Sign in to access Practice Workspace"
+              >
+                <PenTool className="h-4 w-4 text-brand-500" />
+                <span>Practice Workspace</span>
+              </button>
+            )}
             {currentUser?.role === 'admin' && (
-              <Link href="/admin" className="flex items-center gap-1.5 hover:text-amber-300 transition-colors">
-                <LayoutDashboard className="h-4 w-4 text-amber-400" />
+              <Link href="/admin" className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 hover:text-amber-500 transition-colors">
+                <LayoutDashboard className="h-4 w-4 text-amber-500" />
                 <span>Admin Dashboard</span>
               </Link>
             )}
@@ -197,18 +212,32 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-gray-800/80 dark:hover:bg-gray-700/80 text-slate-700 dark:text-gray-300 border border-slate-200 dark:border-gray-700/60 transition-all"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-4 w-4 text-amber-400" />
+            ) : (
+              <Moon className="h-4 w-4 text-indigo-600" />
+            )}
+          </button>
+
           {/* User Auth Profile / Login */}
           {currentUser ? (
-            <div className="flex items-center gap-2 pl-2 border-l border-gray-800">
-              <div className="flex items-center gap-2 bg-gray-900/90 px-3 py-1.5 rounded-xl border border-gray-800 text-xs">
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-gray-800">
+              <div className="flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-gray-800 text-xs text-slate-800 dark:text-gray-200">
                 {currentUser.role === 'admin' ? (
-                  <ShieldCheck className="h-4 w-4 text-indigo-400" />
+                  <ShieldCheck className="h-4 w-4 text-indigo-500" />
                 ) : (
-                  <UserCheck className="h-4 w-4 text-emerald-400" />
+                  <UserCheck className="h-4 w-4 text-emerald-500" />
                 )}
-                <span className="font-bold text-white max-w-[100px] truncate">{currentUser.username}</span>
+                <span className="font-bold text-slate-900 dark:text-white max-w-[100px] truncate">{currentUser.username}</span>
                 {currentUser.role === 'admin' && (
-                  <Link href="/admin" className="text-[9px] px-1.5 py-0.2 rounded font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors">
+                  <Link href="/admin" className="text-[9px] px-1.5 py-0.2 rounded font-extrabold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors">
                     ADMIN
                   </Link>
                 )}
@@ -216,7 +245,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <button
                 onClick={logout}
-                className="p-2 rounded-lg bg-gray-800/80 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 border border-gray-700/60 transition-all"
+                className="p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-gray-800/80 dark:hover:bg-rose-950/60 text-slate-600 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-300 border border-slate-200 dark:border-gray-700/60 transition-all"
                 title="Logout"
               >
                 <LogOut className="h-4 w-4" />

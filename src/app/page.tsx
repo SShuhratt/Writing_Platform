@@ -21,7 +21,7 @@ export default function LandingPage() {
   }, [setCurrentUser]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b0f19]">
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
       <Navbar />
 
       <main className="flex-1">

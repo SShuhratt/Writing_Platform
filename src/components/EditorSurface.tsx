@@ -252,16 +252,16 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
       {levelOffer && assistanceMode === 'ACTIVE_ASSISTANT' && (
         <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 animate-fadeIn transition-all ${
           levelOffer.type === 'UPWARD'
-            ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200'
-            : 'bg-amber-950/60 border-amber-500/40 text-amber-200'
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-950 dark:bg-emerald-950/60 dark:border-emerald-500/40 dark:text-emerald-200'
+            : 'bg-amber-50 border-amber-300 text-amber-950 dark:bg-amber-950/60 dark:border-amber-500/40 dark:text-amber-200'
         }`}>
           <div className="flex items-start gap-3">
             {levelOffer.type === 'UPWARD' ? (
-              <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+              <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
                 <TrendingUp className="h-5 w-5" />
               </div>
             ) : (
-              <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
+              <div className="p-2 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
                 <TrendingDown className="h-5 w-5" />
               </div>
             )}
@@ -269,7 +269,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
               <div className="font-bold text-sm">
                 {levelOffer.type === 'UPWARD' ? 'Target Upgrade Recommendation' : 'Adaptive Band Recalibration'}
               </div>
-              <p className="text-xs text-gray-300 mt-0.5 leading-relaxed">
+              <p className="text-xs text-slate-600 dark:text-gray-300 mt-0.5 leading-relaxed">
                 {levelOffer.reason}
               </p>
             </div>
@@ -278,7 +278,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setLevelOffer(null)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white"
             >
               Dismiss
             </button>
@@ -300,50 +300,50 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
       )}
 
       {/* Editor Main Canvas Header */}
-      <div className="glass-panel rounded-2xl p-5 border border-gray-800 space-y-3">
+      <div className="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-gray-800 space-y-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-brand-400 mb-1">
+            <div className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 mb-1">
               <span>{currentPrompt.category}</span>
               <span>•</span>
-              <span className="text-gray-400">Recommended: {currentPrompt.recommendedTimeMinutes} mins</span>
+              <span className="text-slate-500 dark:text-gray-400">Recommended: {currentPrompt.recommendedTimeMinutes} mins</span>
             </div>
-            <h2 className="text-lg font-bold text-white leading-snug">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-snug">
               {currentPrompt.questionText}
             </h2>
           </div>
 
           <div className="flex items-center gap-3">
             {/* Live Stats Indicators */}
-            <div className="flex items-center gap-2 bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-gray-800 text-xs text-gray-300">
-              <Clock className="h-4 w-4 text-indigo-400" />
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-gray-800 text-xs text-slate-700 dark:text-gray-300">
+              <Clock className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
               <span className="font-mono font-bold">{formatTime(elapsedSeconds)}</span>
             </div>
 
-            <div className="flex items-center gap-2 bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-gray-800 text-xs text-gray-300">
-              <FileText className="h-4 w-4 text-emerald-400" />
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-gray-800 text-xs text-slate-700 dark:text-gray-300">
+              <FileText className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               <span className="font-bold">{wordCount}</span>
-              <span className="text-gray-500">/ {targetWords} words</span>
+              <span className="text-slate-400 dark:text-gray-500">/ {targetWords} words</span>
             </div>
 
-            <div className="flex items-center gap-2 bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-gray-800 text-xs text-gray-300">
-              <AlignLeft className="h-4 w-4 text-amber-400" />
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-gray-800 text-xs text-slate-700 dark:text-gray-300">
+              <AlignLeft className="h-4 w-4 text-amber-500 dark:text-amber-400" />
               <span className="font-bold">{paragraphCount}</span>
-              <span className="text-gray-500">paras</span>
+              <span className="text-slate-400 dark:text-gray-500">paras</span>
             </div>
 
             <div 
-              className="flex items-center gap-1.5 bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-500/30 text-xs text-emerald-300 select-none"
+              className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300 select-none"
               title="Copy-pasting is restricted to guarantee active skill acquisition"
             >
-              <Shield className="h-3.5 w-3.5 text-emerald-400" />
+              <Shield className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               <span className="text-[11px] font-semibold">Anti-Paste Active</span>
             </div>
           </div>
         </div>
 
         {/* Word Progress Bar */}
-        <div className="w-full bg-gray-900 rounded-full h-1.5 overflow-hidden">
+        <div className="w-full bg-slate-200 dark:bg-gray-900 rounded-full h-1.5 overflow-hidden">
           <div
             className={`h-full transition-all duration-500 rounded-full ${
               wordCount >= targetWords ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-brand-500'
@@ -355,14 +355,14 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
 
       {/* Anti-Paste Pedagogical Notification Toast */}
       {pasteBlockedWarning && (
-        <div className="p-3.5 rounded-xl bg-amber-950/95 border border-amber-500/60 text-amber-200 flex items-center justify-between gap-3 shadow-xl animate-fadeIn">
+        <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/95 border border-amber-300 dark:border-amber-500/60 text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3 shadow-xl animate-fadeIn">
           <div className="flex items-center gap-2.5 text-xs font-medium">
-            <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
+            <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
             <span>{pasteBlockedWarning}</span>
           </div>
           <button
             onClick={() => setPasteBlockedWarning(null)}
-            className="px-2.5 py-1 rounded-lg bg-amber-900/60 hover:bg-amber-800/80 text-amber-200 text-xs font-semibold shrink-0 transition-colors"
+            className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-800/80 text-amber-900 dark:text-amber-200 text-xs font-semibold shrink-0 transition-colors"
           >
             Got it
           </button>
@@ -381,14 +381,14 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
               ? `Start drafting your Band ${targetBand} response here... Live Socratic feedback triggers continuously for each topic sentence, 2 sentences, 50 words, and paragraph completion.`
               : `Focus Exam Mode Active: Live feedback is muted. Draft under exam conditions and click "Submit Task" when finished.`
           }
-          className="w-full flex-1 p-6 rounded-2xl bg-gray-900/80 border border-gray-800 text-gray-100 text-base leading-relaxed focus:outline-none focus:border-brand-500/80 placeholder-gray-600 resize-none font-sans shadow-inner tracking-wide"
+          className="w-full flex-1 p-6 rounded-2xl bg-white dark:bg-gray-900/80 border border-slate-200 dark:border-gray-800 text-slate-900 dark:text-gray-100 text-base leading-relaxed focus:outline-none focus:border-brand-500/80 placeholder-slate-400 dark:placeholder-gray-600 resize-none font-sans shadow-sm dark:shadow-inner tracking-wide"
         />
 
         {/* Live Assistant Floating Indicator */}
         <div className="absolute bottom-4 right-6 flex items-center gap-3">
           {isAnalyzing && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-950/90 border border-brand-500/40 text-xs text-brand-300 shadow-lg animate-fadeIn">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-400" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-950/90 border border-brand-200 dark:border-brand-500/40 text-xs text-brand-700 dark:text-brand-300 shadow-lg animate-fadeIn">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-500 dark:text-brand-400" />
               <span>Analyzing Band {targetBand} criteria...</span>
             </div>
           )}

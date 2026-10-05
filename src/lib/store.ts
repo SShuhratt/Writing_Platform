@@ -34,6 +34,11 @@ interface WritingState {
   activeReport: SubmissionReport | null;
   history: SubmissionReport[];
 
+  // Theme state
+  theme: 'dark' | 'light';
+  toggleTheme: () => void;
+  setTheme: (theme: 'dark' | 'light') => void;
+
   // Actions
   setCurrentUser: (user: User | null) => void;
   setAuthModalMode: (mode: AuthModalMode) => void;
@@ -82,6 +87,22 @@ export const useWritingStore = create<WritingState>((set, get) => ({
   isSubmitting: false,
   activeReport: null,
   history: [],
+
+  theme: 'dark',
+
+  setTheme: (theme: 'dark' | 'light') => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ielts_theme', theme);
+      document.documentElement.classList.remove('dark', 'light');
+      document.documentElement.classList.add(theme);
+    }
+    set({ theme });
+  },
+
+  toggleTheme: () => {
+    const nextTheme = get().theme === 'dark' ? 'light' : 'dark';
+    get().setTheme(nextTheme);
+  },
 
   setCurrentUser: (user: User | null) => set({
     currentUser: user,
