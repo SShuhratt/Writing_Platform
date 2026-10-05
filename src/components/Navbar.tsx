@@ -10,7 +10,6 @@ import {
   Target, 
   EyeOff, 
   BookOpen, 
-  Key, 
   RotateCcw, 
   Zap,
   GraduationCap,
@@ -26,13 +25,11 @@ import {
 
 interface NavbarProps {
   onOpenPromptsModal?: () => void;
-  onOpenApiKeyModal?: () => void;
   isWorkspace?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
   onOpenPromptsModal, 
-  onOpenApiKeyModal,
   isWorkspace = false 
 }) => {
   const { 
@@ -42,7 +39,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     setAssistanceMode, 
     currentPrompt,
     resetSession,
-    geminiApiKey,
     currentUser,
     logout,
     setAuthModalMode,
@@ -186,21 +182,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         )}
 
-        {/* Right: API Key & Authentication User Menu */}
+        {/* Right: Reset Session, Theme Toggle & Authentication User Menu */}
         <div className="flex items-center gap-2">
-          {isWorkspace && onOpenApiKeyModal && (
-            <button
-              onClick={onOpenApiKeyModal}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                geminiApiKey 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
-                  : 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
-              }`}
-            >
-              <Key className="h-3.5 w-3.5" />
-              <span>{geminiApiKey ? 'Gemini Key Configured' : 'Key Config'}</span>
-            </button>
-          )}
 
           {isWorkspace && (
             <button

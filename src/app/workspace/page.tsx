@@ -6,7 +6,6 @@ import { generateSubmissionEvaluation } from '@/lib/ai-service';
 import { Navbar } from '@/components/Navbar';
 import { EditorSurface } from '@/components/EditorSurface';
 import { SocraticSidePanel } from '@/components/SocraticSidePanel';
-import { ApiKeyModal } from '@/components/ApiKeyModal';
 import { PromptSelectorModal } from '@/components/PromptSelectorModal';
 import { DualLayerReportModal } from '@/components/DualLayerReportModal';
 import { AuthModals } from '@/components/auth/AuthModals';
@@ -18,11 +17,8 @@ import {
   LogIn, 
   UserPlus, 
   ArrowLeft, 
-  Sparkles, 
   ShieldCheck, 
-  CheckCircle2, 
-  Zap,
-  GraduationCap
+  CheckCircle2
 } from 'lucide-react';
 
 export default function WorkspacePage() {
@@ -33,8 +29,6 @@ export default function WorkspacePage() {
     targetBand,
     assistanceMode,
     currentPrompt,
-    geminiApiKey,
-    setGeminiApiKey,
     setCurrentUser,
     isSubmitting,
     setIsSubmitting,
@@ -42,24 +36,19 @@ export default function WorkspacePage() {
     setActiveReport
   } = useWritingStore();
 
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isPromptsModalOpen, setIsPromptsModalOpen] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Load API Key & User from LocalStorage on mount
+  // Load User from Session on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedKey = localStorage.getItem('ielts_gemini_api_key');
-      if (storedKey) {
-        setGeminiApiKey(storedKey);
-      }
       const user = AuthService.getStoredUser();
       if (user) {
         setCurrentUser(user);
       }
       setIsCheckingAuth(false);
     }
-  }, [setGeminiApiKey, setCurrentUser]);
+  }, [setCurrentUser]);
 
   // Handle Essay Submission & Dual-Layer Assessment
   const handleSubmitTask = async () => {
@@ -72,7 +61,6 @@ export default function WorkspacePage() {
         targetBand,
         prompt: currentPrompt,
         mode: assistanceMode,
-        apiKey: geminiApiKey,
       });
 
       setActiveReport(report);
@@ -83,20 +71,12 @@ export default function WorkspacePage() {
     }
   };
 
-  const handleQuickDemoLogin = () => {
-    const res = AuthService.login('testuser@gmail.com', 'testuser1');
-    if (res.success && res.user) {
-      setCurrentUser(res.user);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
       {/* Top Workspace Navbar Header */}
       <Navbar
         isWorkspace
         onOpenPromptsModal={() => setIsPromptsModalOpen(true)}
-        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
       />
 
       {/* Main Workspace Layout or Authentication Gate */}
@@ -109,40 +89,40 @@ export default function WorkspacePage() {
         <main className="flex-1 flex items-center justify-center p-4 md:p-8">
           <div className="max-w-xl w-full glass-panel rounded-3xl p-8 border border-slate-200 dark:border-gray-800 shadow-2xl space-y-6 text-center animate-fadeIn">
             
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-xl shadow-brand-500/25 mx-auto">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400">
               <Lock className="h-8 w-8" />
             </div>
 
             <div className="space-y-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 inline-flex items-center gap-1.5">
-                <GraduationCap className="h-4 w-4" />
-                Practice Workspace Access
-              </span>
-              <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                Sign In Required to Practice
-              </h2>
-              <p className="text-sm text-slate-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
-                Please sign in or register an account to enter the Practice Workspace, receive real-time Socratic mentorship, and access official Dual-Layer assessment reports.
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Protected Learning Environment</span>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">
+                Authentication Required
+              </h1>
+              <p className="text-xs md:text-sm text-slate-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+                To guarantee genuine skill acquisition, track your progression towards your target band score, and retain your assessment reports, please sign in or register an account.
               </p>
             </div>
 
-            {/* Feature Highlights */}
-            <div className="p-4 rounded-2xl bg-slate-100/80 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-800 text-left space-y-2.5 text-xs">
+            {/* Feature Highlights Card */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-800 text-left space-y-2 text-xs">
               <div className="flex items-center gap-2 text-slate-700 dark:text-gray-300">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span>Real-time Socratic feedback tuned to your Target Band (5.0–9.0)</span>
+                <span>Active anti-paste cognitive retention protection</span>
               </div>
               <div className="flex items-center gap-2 text-slate-700 dark:text-gray-300">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span>Anti-Paste Learning Guard to build authentic test-day speed</span>
+                <span>Live Socratic guidance cards tuned to your target band</span>
               </div>
               <div className="flex items-center gap-2 text-slate-700 dark:text-gray-300">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span>Official PDF assessment reports & one-click Telegram sharing</span>
+                <span>Dual-layer examiner grading with downloadable PDF & Telegram export</span>
               </div>
             </div>
 
-            {/* Main Action Buttons */}
+            {/* Action Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <button
                 onClick={() => setAuthModalMode('LOGIN')}
@@ -161,19 +141,11 @@ export default function WorkspacePage() {
               </button>
             </div>
 
-            {/* Fast Demo Login Option */}
-            <div className="pt-2 border-t border-slate-200 dark:border-gray-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <button
-                onClick={handleQuickDemoLogin}
-                className="text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-1.5"
-              >
-                <Zap className="h-3.5 w-3.5" />
-                <span>Quick Demo Login (testuser@gmail.com)</span>
-              </button>
-
+            {/* Return to Home Link */}
+            <div className="pt-3 border-t border-slate-200 dark:border-gray-800/80 flex items-center justify-center text-xs">
               <Link
                 href="/"
-                className="text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 flex items-center gap-1 transition-colors"
+                className="text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 flex items-center gap-1.5 transition-colors font-medium py-1"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span>Return to Home</span>
@@ -200,11 +172,6 @@ export default function WorkspacePage() {
       )}
 
       {/* Modals */}
-      <ApiKeyModal
-        isOpen={isApiKeyModalOpen}
-        onClose={() => setIsApiKeyModalOpen(false)}
-      />
-
       <PromptSelectorModal
         isOpen={isPromptsModalOpen}
         onClose={() => setIsPromptsModalOpen(false)}

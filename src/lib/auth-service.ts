@@ -13,18 +13,6 @@ export const DEFAULT_ADMIN_USER: User = {
 
 export const DEFAULT_ADMIN_PASS = '$Huhrat333';
 
-export const DEFAULT_TEST_USER: User = {
-  id: 'user-testuser',
-  username: 'testuser',
-  email: 'testuser@gmail.com',
-  fullName: 'Ordinary Test Student',
-  role: 'user',
-  targetBand: '7.5',
-  createdAt: Date.now()
-};
-
-export const DEFAULT_TEST_PASS = 'testuser1';
-
 /**
  * Local Authentication Manager
  */
@@ -58,12 +46,6 @@ export class AuthService {
     if ((cleanId === 'shuhrat3' || cleanId === 'admin@ieltsmentor.ai') && pass === DEFAULT_ADMIN_PASS) {
       this.storeUser(DEFAULT_ADMIN_USER);
       return { success: true, user: DEFAULT_ADMIN_USER };
-    }
-
-    // Check Default Ordinary Test User Credentials
-    if ((cleanId === 'testuser@gmail.com' || cleanId === 'testuser') && pass === DEFAULT_TEST_PASS) {
-      this.storeUser(DEFAULT_TEST_USER);
-      return { success: true, user: DEFAULT_TEST_USER };
     }
 
     // Standard User Login Mock

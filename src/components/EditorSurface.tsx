@@ -33,7 +33,6 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
     targetBand,
     setTargetBand,
     assistanceMode,
-    geminiApiKey,
     isAnalyzing,
     setIsAnalyzing,
     setGuidanceCards,
@@ -95,7 +94,6 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
         essayText: currentText,
         targetBand,
         prompt: currentPrompt,
-        apiKey: geminiApiKey,
       });
 
       if (res.cards) {

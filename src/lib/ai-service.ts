@@ -9,7 +9,6 @@ export interface RealtimeGuidanceRequest {
   essayText: string;
   targetBand: TargetBand;
   prompt: IELTSTaskPrompt;
-  apiKey?: string;
 }
 
 export interface RealtimeGuidanceResponse {
@@ -22,29 +21,28 @@ export interface EvaluationRequest {
   targetBand: TargetBand;
   prompt: IELTSTaskPrompt;
   mode: 'ACTIVE_ASSISTANT' | 'FOCUS_EXAM';
-  apiKey?: string;
 }
 
 /**
  * Generate Realtime Socratic Guidance
  */
 export async function generateRealtimeGuidance(req: RealtimeGuidanceRequest): Promise<RealtimeGuidanceResponse> {
-  const { essayText, targetBand, prompt, apiKey } = req;
+  const { essayText, targetBand, prompt } = req;
 
-  if (apiKey && apiKey.trim().length > 5) {
-    try {
-      const response = await fetch('/api/guidance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ essayText, targetBand, prompt, apiKey }),
-      });
-      if (response.ok) {
-        const data = await response.json();
+  try {
+    const response = await fetch('/api/guidance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ essayText, targetBand, prompt }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.cards) {
         return data;
       }
-    } catch (err) {
-      console.warn('Gemini API call failed, falling back to Socratic engine:', err);
     }
+  } catch (err) {
+    console.warn('Server Gemini API call unavailable, using Socratic engine:', err);
   }
 
   // Fallback to intelligent Socratic Guidance Generator
@@ -55,22 +53,22 @@ export async function generateRealtimeGuidance(req: RealtimeGuidanceRequest): Pr
  * Generate Dual-Layer Submission Evaluation Report
  */
 export async function generateSubmissionEvaluation(req: EvaluationRequest): Promise<SubmissionReport> {
-  const { essayText, targetBand, prompt, mode, apiKey } = req;
+  const { essayText, targetBand, prompt, mode } = req;
 
-  if (apiKey && apiKey.trim().length > 5) {
-    try {
-      const response = await fetch('/api/evaluation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ essayText, targetBand, prompt, mode, apiKey }),
-      });
-      if (response.ok) {
-        const data = await response.json();
+  try {
+    const response = await fetch('/api/evaluation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ essayText, targetBand, prompt, mode }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.layer1ExaminerReport && data.layer2AlignmentReport) {
         return data;
       }
-    } catch (err) {
-      console.warn('Gemini API evaluation call failed, falling back to examiner engine:', err);
     }
+  } catch (err) {
+    console.warn('Server Gemini API evaluation call unavailable, using examiner engine:', err);
   }
 
   // Fallback to intelligent Examiner Assessment Engine

@@ -15,7 +15,6 @@ interface WritingState {
   targetBand: TargetBand;
   assistanceMode: AssistanceMode;
   currentPrompt: IELTSTaskPrompt;
-  geminiApiKey: string;
 
   // Active Writing State
   essayText: string;
@@ -47,7 +46,6 @@ interface WritingState {
   setTargetBand: (band: TargetBand) => void;
   setAssistanceMode: (mode: AssistanceMode) => void;
   setPrompt: (prompt: IELTSTaskPrompt) => void;
-  setGeminiApiKey: (key: string) => void;
 
   updateEssayText: (text: string) => void;
   setTimerRunning: (running: boolean) => void;
@@ -72,7 +70,6 @@ export const useWritingStore = create<WritingState>((set, get) => ({
   targetBand: '7.0',
   assistanceMode: 'ACTIVE_ASSISTANT',
   currentPrompt: OFFICIAL_PROMPTS_DATABASE[0],
-  geminiApiKey: '',
 
   essayText: '',
   wordCount: 0,
@@ -129,13 +126,6 @@ export const useWritingStore = create<WritingState>((set, get) => ({
     levelOffer: null,
     activeReport: null
   }),
-
-  setGeminiApiKey: (key: string) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ielts_gemini_api_key', key);
-    }
-    set({ geminiApiKey: key });
-  },
 
   updateEssayText: (text: string) => {
     const trimmed = text.trim();

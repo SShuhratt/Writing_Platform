@@ -4,10 +4,11 @@ import { calculateOverallBandScore } from '@/lib/ielts-rubric';
 
 export async function POST(req: Request) {
   try {
-    const { essayText, targetBand, prompt, mode, apiKey } = await req.json();
+    const { essayText, targetBand, prompt, mode } = await req.json();
 
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'API key is required' }, { status: 400 });
+      return NextResponse.json({ error: 'GEMINI_API_KEY is not configured on the server' }, { status: 503 });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
