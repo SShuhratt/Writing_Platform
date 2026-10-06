@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTursoClient, isTursoConfigured } from '@/lib/turso';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 import { OFFICIAL_PROMPTS_DATABASE } from '@/lib/prompts-database';
 import { IELTSTaskPrompt } from '@/types/ielts';
@@ -9,59 +10,123 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // 'TASK_1_ACADEMIC', 'TASK_1_GENERAL', 'TASK_2_ESSAY', or 'TASK_1'
     const category = searchParams.get('category');
     const search = searchParams.get('search')?.toLowerCase().trim() || '';
-    const limit = parseInt(searchParams.get('limit') || '200', 10);
+    const limit = parseInt(searchParams.get('limit') || '250', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    // 1. Try querying Supabase if credentials exist
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        let query = supabase.from('prompts').select('*', { count: 'exact' });
+    // 1. Try Turso LibSQL Database first if configured
+    if (isTursoConfigured()) {
+      const turso = getTursoClient();
+      if (turso) {
+        try {
+          let whereClauses: string[] = [];
+          let args: any[] = [];
 
-        if (type) {
-          if (type === 'TASK_1') {
-            query = query.in('type', ['TASK_1_ACADEMIC', 'TASK_1_GENERAL']);
-          } else {
-            query = query.eq('type', type);
+          if (type) {
+            if (type === 'TASK_1') {
+              whereClauses.push("type IN ('TASK_1_ACADEMIC', 'TASK_1_GENERAL')");
+            } else {
+              whereClauses.push('type = ?');
+              args.push(type);
+            }
           }
-        }
 
-        if (category && category !== 'ALL') {
-          query = query.ilike('category', `%${category}%`);
-        }
+          if (category && category !== 'ALL') {
+            whereClauses.push('category LIKE ?');
+            args.push(`%${category}%`);
+          }
 
-        if (search) {
-          query = query.or(`title.ilike.%${search}%,question_text.ilike.%${search}%,category.ilike.%${search}%`);
-        }
+          if (search) {
+            whereClauses.push('(LOWER(title) LIKE ? OR LOWER(question_text) LIKE ? OR LOWER(category) LIKE ?)');
+            const sArg = `%${search}%`;
+            args.push(sArg, sArg, sArg);
+          }
 
-        query = query.order('id', { ascending: true }).range(offset, offset + limit - 1);
+          const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+          const sql = `SELECT * FROM prompts ${whereSql} ORDER BY id ASC LIMIT ? OFFSET ?`;
+          args.push(limit, offset);
 
-        const { data, error, count } = await query;
+          const result = await turso.execute({ sql, args });
 
-        if (!error && data && data.length > 0) {
-          const prompts: IELTSTaskPrompt[] = data.map((row: any) => ({
-            id: row.id,
-            title: row.title,
-            type: row.type,
-            category: row.category,
-            questionText: row.question_text,
-            chartDescription: row.chart_description || undefined,
-            illustrationType: row.illustration_type || undefined,
-            minWordCount: row.min_word_count,
-            recommendedTimeMinutes: row.recommended_time_minutes,
-          }));
+          if (result.rows.length > 0) {
+            const prompts: IELTSTaskPrompt[] = result.rows.map((row: any) => ({
+              id: String(row.id),
+              title: String(row.title),
+              type: row.type as any,
+              category: String(row.category),
+              questionText: String(row.question_text),
+              chartDescription: row.chart_description ? String(row.chart_description) : undefined,
+              illustrationType: row.illustration_type ? row.illustration_type as any : undefined,
+              minWordCount: Number(row.min_word_count || 250),
+              recommendedTimeMinutes: Number(row.recommended_time_minutes || 40),
+            }));
 
-          return NextResponse.json({
-            success: true,
-            prompts,
-            total: count ?? prompts.length,
-            source: 'supabase',
-          });
+            return NextResponse.json({
+              success: true,
+              prompts,
+              total: prompts.length,
+              source: 'turso',
+            });
+          }
+        } catch (tursoErr) {
+          console.warn('Turso query fallback:', tursoErr);
         }
       }
     }
 
-    // 2. Fallback to in-memory OFFICIAL_PROMPTS_DATABASE (160 items)
+    // 2. Try Supabase if configured
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          let query = supabase.from('prompts').select('*', { count: 'exact' });
+
+          if (type) {
+            if (type === 'TASK_1') {
+              query = query.in('type', ['TASK_1_ACADEMIC', 'TASK_1_GENERAL']);
+            } else {
+              query = query.eq('type', type);
+            }
+          }
+
+          if (category && category !== 'ALL') {
+            query = query.ilike('category', `%${category}%`);
+          }
+
+          if (search) {
+            query = query.or(`title.ilike.%${search}%,question_text.ilike.%${search}%,category.ilike.%${search}%`);
+          }
+
+          query = query.order('id', { ascending: true }).range(offset, offset + limit - 1);
+
+          const { data, error, count } = await query;
+
+          if (!error && data && data.length > 0) {
+            const prompts: IELTSTaskPrompt[] = data.map((row: any) => ({
+              id: row.id,
+              title: row.title,
+              type: row.type,
+              category: row.category,
+              questionText: row.question_text,
+              chartDescription: row.chart_description || undefined,
+              illustrationType: row.illustration_type || undefined,
+              minWordCount: row.min_word_count,
+              recommendedTimeMinutes: row.recommended_time_minutes,
+            }));
+
+            return NextResponse.json({
+              success: true,
+              prompts,
+              total: count ?? prompts.length,
+              source: 'supabase',
+            });
+          }
+        } catch (supaErr) {
+          console.warn('Supabase query fallback:', supaErr);
+        }
+      }
+    }
+
+    // 3. Fallback to in-memory OFFICIAL_PROMPTS_DATABASE (all 160 items)
     let filtered = OFFICIAL_PROMPTS_DATABASE;
 
     if (type) {
@@ -131,10 +196,26 @@ export async function POST(request: NextRequest) {
       recommendedTimeMinutes: recommendedTimeMinutes || (type === 'TASK_2_ESSAY' ? 40 : 20),
     };
 
-    if (isSupabaseConfigured()) {
+    if (isTursoConfigured()) {
+      const turso = getTursoClient();
+      if (turso) {
+        await turso.execute({
+          sql: `INSERT INTO prompts (id, title, type, category, question_text, min_word_count, recommended_time_minutes) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          args: [
+            newPrompt.id,
+            newPrompt.title,
+            newPrompt.type,
+            newPrompt.category,
+            newPrompt.questionText,
+            newPrompt.minWordCount,
+            newPrompt.recommendedTimeMinutes,
+          ],
+        });
+      }
+    } else if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('prompts').insert({
+        await supabase.from('prompts').insert({
           id: newPrompt.id,
           title: newPrompt.title,
           type: newPrompt.type,
@@ -143,10 +224,6 @@ export async function POST(request: NextRequest) {
           min_word_count: newPrompt.minWordCount,
           recommended_time_minutes: newPrompt.recommendedTimeMinutes,
         });
-
-        if (error) {
-          console.warn('Could not insert custom prompt into Supabase:', error.message);
-        }
       }
     }
 

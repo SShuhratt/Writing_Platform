@@ -15,7 +15,7 @@ interface PromptSelectorModalProps {
 export const PromptSelectorModal: React.FC<PromptSelectorModalProps> = ({ isOpen, onClose }) => {
   const { currentPrompt, setPrompt } = useWritingStore();
   const [promptsList, setPromptsList] = useState<IELTSTaskPrompt[]>(OFFICIAL_PROMPTS_DATABASE);
-  const [dataSource, setDataSource] = useState<'supabase' | 'fallback'>('fallback');
+  const [dataSource, setDataSource] = useState<'turso' | 'supabase' | 'fallback'>('fallback');
   const [selectedTaskType, setSelectedTaskType] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('ALL');
@@ -146,7 +146,7 @@ export const PromptSelectorModal: React.FC<PromptSelectorModalProps> = ({ isOpen
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">IELTS Task Library</h3>
                 <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300 border border-slate-200 dark:border-gray-700">
                   <Database className="h-3 w-3 text-emerald-500" />
-                  <span>{promptsList.length} Prompts ({dataSource === 'supabase' ? 'Supabase DB' : 'Bundled DB'})</span>
+                  <span>{promptsList.length} Prompts ({dataSource === 'turso' ? 'Turso DB' : dataSource === 'supabase' ? 'Supabase DB' : 'Bundled DB'})</span>
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-gray-400">Browse 150 Task 2 topics, 10 Task 1 visual charts/letters, or enter custom prompts</p>
