@@ -38,6 +38,11 @@ lerna-debug.log*
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
 next-env.d.ts
 
 # Vercel deployment cache
