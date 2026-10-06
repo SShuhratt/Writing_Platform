@@ -24,7 +24,7 @@ export const HeroSection: React.FC = () => {
             {/* Top Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-300 text-xs font-semibold">
               <Sparkles className="h-4 w-4 text-brand-400" />
-              <span>Adaptive IELTS Writing Socratic Engine</span>
+              <span>Adaptive IELTS Writing Mentor</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-[1.1]">
@@ -95,7 +95,7 @@ export const HeroSection: React.FC = () => {
                   <div className="h-3 w-3 rounded-full bg-rose-500" />
                   <div className="h-3 w-3 rounded-full bg-amber-500" />
                   <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-mono text-slate-500 dark:text-gray-400 ml-2">live_socratic_engine.ts</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-gray-200 ml-2">Live Writing Assistant</span>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                   Target Band 7.5

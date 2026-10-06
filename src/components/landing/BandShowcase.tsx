@@ -23,7 +23,7 @@ export const BandShowcase: React.FC = () => {
             Ground Every Live Suggestion in Official IELTS Criteria
           </h2>
           <p className="text-sm text-slate-600 dark:text-gray-400">
-            Select a target band score below to see how our AI Socratic engine calibrates feedback across all four official IELTS writing dimensions.
+            Select a target band score below to see how our AI writing mentor calibrates feedback across all four official IELTS writing dimensions.
           </p>
         </div>
 
