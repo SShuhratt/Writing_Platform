@@ -1,11 +1,28 @@
 import { createClient } from '@libsql/client';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
 
-// Load .env and .env.local
-dotenv.config({ path: '.env.local' });
-dotenv.config({ path: '.env' });
+// Parse .env.local manually if not in process.env
+function loadEnv() {
+  const envPath = path.resolve(process.cwd(), '.env.local');
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf-8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx !== -1) {
+        const key = trimmed.slice(0, idx).trim();
+        const val = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+        if (!process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  }
+}
+
+loadEnv();
 
 const url = process.env.TURSO_DATABASE_URL;
 const authToken = process.env.TURSO_AUTH_TOKEN;
