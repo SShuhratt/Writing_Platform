@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useWritingStore } from '@/lib/store';
 import { OFFICIAL_PROMPTS_DATABASE } from '@/lib/prompts-database';
 import { IELTSTaskPrompt, TaskType } from '@/types/ielts';
-import { BookOpen, X, Clock, FileText, CheckCircle2, PlusCircle } from 'lucide-react';
+import { BookOpen, X, Clock, FileText, CheckCircle2, PlusCircle, Eye } from 'lucide-react';
+import { Task1VisualIllustration } from './Task1VisualIllustration';
 
 interface PromptSelectorModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const PromptSelectorModal: React.FC<PromptSelectorModalProps> = ({ isOpen
   const { currentPrompt, setPrompt } = useWritingStore();
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [isCustomMode, setIsCustomMode] = useState(false);
+  const [previewDiagramPromptId, setPreviewDiagramPromptId] = useState<string | null>(null);
 
   const [customTitle, setCustomTitle] = useState('');
   const [customQuestion, setCustomQuestion] = useState('');
@@ -163,51 +165,121 @@ export const PromptSelectorModal: React.FC<PromptSelectorModalProps> = ({ isOpen
           <div className="space-y-3 overflow-y-auto pr-1 flex-1">
             {filteredPrompts.map((prompt) => {
               const isSelected = currentPrompt.id === prompt.id;
+              const hasIllustration = !!prompt.illustrationType;
+              const isPreviewOpen = previewDiagramPromptId === prompt.id;
+
               return (
                 <div
                   key={prompt.id}
                   onClick={() => handleSelectPrompt(prompt)}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  className={`p-4 md:p-5 rounded-2xl border cursor-pointer transition-all ${
                     isSelected
-                      ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-500 shadow-md'
-                      : 'bg-white dark:bg-gray-900/60 border-slate-200 dark:border-gray-800 hover:border-brand-300 dark:hover:border-gray-600'
+                      ? 'bg-amber-400 dark:bg-amber-400 border-2 border-amber-500 shadow-xl shadow-amber-500/25 ring-2 ring-amber-400/50'
+                      : 'bg-white dark:bg-gray-900/70 border-slate-200 dark:border-gray-800 hover:border-amber-400 dark:hover:border-amber-500/60 shadow-sm'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900 dark:text-white">{prompt.title}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 dark:bg-gray-800 text-brand-700 dark:text-brand-300 border border-slate-200 dark:border-gray-700">
+                  <div className="flex items-start justify-between gap-3 mb-2.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`font-black text-sm md:text-base ${
+                        isSelected ? 'text-slate-950' : 'text-slate-900 dark:text-white'
+                      }`}>
+                        {prompt.title}
+                      </span>
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
+                        isSelected
+                          ? 'bg-blue-950 text-white border-blue-900 shadow-sm'
+                          : 'bg-slate-100 dark:bg-gray-800 text-brand-700 dark:text-brand-300 border border-slate-200 dark:border-gray-700'
+                      }`}>
                         {prompt.category}
                       </span>
+                      {hasIllustration && (
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border flex items-center gap-1 ${
+                          isSelected
+                            ? 'bg-blue-900/90 text-amber-200 border-blue-800'
+                            : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60'
+                        }`}>
+                          <Eye className="h-3 w-3" />
+                          <span>Visual Diagram</span>
+                        </span>
+                      )}
                     </div>
 
-                    {isSelected && (
-                      <span className="flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Active</span>
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {hasIllustration && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewDiagramPromptId(isPreviewOpen ? null : prompt.id);
+                          }}
+                          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all ${
+                            isSelected
+                              ? 'bg-blue-950 text-amber-300 border-blue-900 hover:bg-blue-900'
+                              : 'bg-slate-100 dark:bg-gray-800 text-slate-700 dark:text-gray-300 border-slate-200 dark:border-gray-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {isPreviewOpen ? 'Hide Diagram' : 'Preview Diagram'}
+                        </button>
+                      )}
+
+                      {isSelected && (
+                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-950 text-amber-300 shadow-md">
+                          <CheckCircle2 className="h-4 w-4 text-amber-400" />
+                          <span>Active</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {prompt.chartDescription && (
-                    <p className="text-xs text-amber-800 dark:text-amber-300/90 italic mb-2 bg-amber-50 dark:bg-amber-500/10 p-2 rounded-lg border border-amber-200 dark:border-amber-500/20">
+                    <div className={`text-xs italic mb-2.5 p-3 rounded-xl border leading-relaxed ${
+                      isSelected
+                        ? 'bg-amber-200/90 text-blue-950 border-amber-500/60 font-semibold'
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-800/40 font-medium'
+                    }`}>
                       {prompt.chartDescription}
-                    </p>
+                    </div>
                   )}
 
-                  <p className="text-xs text-slate-600 dark:text-gray-300 leading-relaxed mb-3">
+                  {/* Inline Diagram Preview if toggled */}
+                  {hasIllustration && isPreviewOpen && (
+                    <div
+                      className="my-3 p-2 rounded-xl bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-700 shadow-inner"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Task1VisualIllustration
+                        promptId={prompt.id}
+                        illustrationType={prompt.illustrationType}
+                        title={prompt.title}
+                        compact={true}
+                      />
+                    </div>
+                  )}
+
+                  <p className={`text-xs leading-relaxed mb-3 ${
+                    isSelected ? 'text-slate-950 font-semibold' : 'text-slate-600 dark:text-gray-300'
+                  }`}>
                     {prompt.questionText}
                   </p>
 
-                  <div className="flex items-center gap-4 text-[11px] text-slate-500 dark:text-gray-400">
-                    <div className="flex items-center gap-1">
-                      <FileText className="h-3.5 w-3.5 text-slate-400 dark:text-gray-500" />
+                  <div className={`flex items-center gap-4 text-[11px] pt-2 border-t ${
+                    isSelected
+                      ? 'border-amber-500/40 text-blue-950 font-bold'
+                      : 'border-slate-100 dark:border-gray-800/80 text-slate-500 dark:text-gray-400'
+                  }`}>
+                    <div className="flex items-center gap-1.5">
+                      <FileText className={`h-3.5 w-3.5 ${isSelected ? 'text-blue-950' : 'text-slate-400 dark:text-gray-500'}`} />
                       <span>Min {prompt.minWordCount} words</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5 text-slate-400 dark:text-gray-500" />
+                    <div className="flex items-center gap-1.5">
+                      <Clock className={`h-3.5 w-3.5 ${isSelected ? 'text-blue-950' : 'text-slate-400 dark:text-gray-500'}`} />
                       <span>{prompt.recommendedTimeMinutes} mins recommended</span>
                     </div>
+                    {prompt.type === 'TASK_1_ACADEMIC' && (
+                      <span className={`ml-auto font-black ${isSelected ? 'text-blue-950' : 'text-blue-600 dark:text-blue-400'}`}>
+                        Task 1 Academic
+                      </span>
+                    )}
                   </div>
                 </div>
               );

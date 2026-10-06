@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Vercel deployment cache
 .vercel
+.env*

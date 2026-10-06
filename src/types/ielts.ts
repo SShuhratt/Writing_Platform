@@ -4,6 +4,14 @@ export type AssistanceMode = 'ACTIVE_ASSISTANT' | 'FOCUS_EXAM';
 
 export type TaskType = 'TASK_1_ACADEMIC' | 'TASK_1_GENERAL' | 'TASK_2_ESSAY';
 
+export type IllustrationType = 
+  | 'LINE_GRAPH' 
+  | 'BAR_CHART' 
+  | 'PIE_CHARTS' 
+  | 'PROCESS_DIAGRAM' 
+  | 'MAP_COMPARISON' 
+  | 'TABLE';
+
 export interface IELTSTaskPrompt {
   id: string;
   title: string;
@@ -11,6 +19,7 @@ export interface IELTSTaskPrompt {
   category: string;
   questionText: string;
   chartDescription?: string;
+  illustrationType?: IllustrationType;
   minWordCount: number;
   recommendedTimeMinutes: number;
 }

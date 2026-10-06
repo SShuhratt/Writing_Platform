@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useWritingStore } from '@/lib/store';
 import { generateRealtimeGuidance } from '@/lib/ai-service';
+import { Task1VisualIllustration } from './Task1VisualIllustration';
 import { 
   Clock, 
   FileText, 
@@ -12,14 +13,16 @@ import {
   Send, 
   Loader2,
   Shield,
-  ShieldAlert
+  ShieldAlert,
+  BookOpen
 } from 'lucide-react';
 
 interface EditorSurfaceProps {
   onSubmitTask: () => void;
+  onOpenPromptsModal?: () => void;
 }
 
-export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) => {
+export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOpenPromptsModal }) => {
   const {
     essayText,
     updateEssayText,
@@ -297,59 +300,96 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask }) =>
         </div>
       )}
 
-      {/* Editor Main Canvas Header */}
-      <div className="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-gray-800 space-y-3">
+      {/* Editor Main Canvas Header - Selected Topic with Yellow Background and Black & Dark Blue Font */}
+      <div className="rounded-2xl p-5 border-2 border-amber-500 bg-amber-400 dark:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/15 space-y-3.5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 mb-1">
-              <span>{currentPrompt.category}</span>
-              <span>•</span>
-              <span className="text-slate-500 dark:text-gray-400">Recommended: {currentPrompt.recommendedTimeMinutes} mins</span>
+          <div className="space-y-1.5 flex-1 min-w-[280px]">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-950 text-amber-300 border border-blue-900 shadow-sm">
+                {currentPrompt.category}
+              </span>
+              <span className="text-xs font-bold text-blue-950">
+                • {currentPrompt.recommendedTimeMinutes} mins recommended
+              </span>
+              <span className="text-xs font-bold text-blue-950">
+                • Min: {currentPrompt.minWordCount} words
+              </span>
+              {onOpenPromptsModal && (
+                <button
+                  type="button"
+                  onClick={onOpenPromptsModal}
+                  className="flex items-center gap-1 ml-auto sm:ml-2 text-[11px] font-black px-2.5 py-1 rounded-lg bg-blue-950 hover:bg-blue-900 text-amber-300 border border-blue-900 shadow-sm transition-all"
+                  title="Switch to another IELTS question"
+                >
+                  <BookOpen className="h-3 w-3" />
+                  <span>Change Topic</span>
+                </button>
+              )}
             </div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-snug">
-              {currentPrompt.questionText}
+
+            <h2 className="text-lg md:text-xl font-black text-slate-950 leading-snug">
+              {currentPrompt.title}
             </h2>
+
+            {currentPrompt.chartDescription && (
+              <div className="p-3 rounded-xl bg-amber-300/90 border border-amber-600/50 text-blue-950 text-xs font-semibold italic leading-relaxed">
+                {currentPrompt.chartDescription}
+              </div>
+            )}
+
+            <p className="text-xs md:text-sm font-semibold text-slate-950 leading-relaxed">
+              {currentPrompt.questionText}
+            </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Live Stats Indicators */}
-            <div className="flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-gray-800 text-xs text-slate-700 dark:text-gray-300">
-              <Clock className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {/* Live Stats Indicators in Dark Blue for strong contrast */}
+            <div className="flex items-center gap-1.5 bg-blue-950 px-3 py-1.5 rounded-xl border border-blue-900 text-xs text-amber-300 shadow-sm">
+              <Clock className="h-4 w-4 text-amber-400" />
               <span className="font-mono font-bold">{formatTime(elapsedSeconds)}</span>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-gray-800 text-xs text-slate-700 dark:text-gray-300">
-              <FileText className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+            <div className="flex items-center gap-1.5 bg-blue-950 px-3 py-1.5 rounded-xl border border-blue-900 text-xs text-white shadow-sm">
+              <FileText className="h-4 w-4 text-emerald-400" />
               <span className="font-bold">{wordCount}</span>
-              <span className="text-slate-400 dark:text-gray-500">/ {targetWords} words</span>
+              <span className="text-blue-200">/ {targetWords}</span>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-gray-800 text-xs text-slate-700 dark:text-gray-300">
-              <AlignLeft className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+            <div className="flex items-center gap-1.5 bg-blue-950 px-3 py-1.5 rounded-xl border border-blue-900 text-xs text-white shadow-sm">
+              <AlignLeft className="h-4 w-4 text-amber-400" />
               <span className="font-bold">{paragraphCount}</span>
-              <span className="text-slate-400 dark:text-gray-500">paras</span>
+              <span className="text-blue-200">paras</span>
             </div>
 
             <div 
-              className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300 select-none"
+              className="flex items-center gap-1.5 bg-blue-950 px-3 py-1.5 rounded-xl border border-blue-900 text-xs text-emerald-300 select-none shadow-sm"
               title="Copy-pasting is restricted to guarantee active skill acquisition"
             >
-              <Shield className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-[11px] font-semibold">Anti-Paste Active</span>
+              <Shield className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-[11px] font-bold">Anti-Paste</span>
             </div>
           </div>
         </div>
 
         {/* Word Progress Bar */}
-        <div className="w-full bg-slate-200 dark:bg-gray-900 rounded-full h-1.5 overflow-hidden">
+        <div className="w-full bg-amber-500/60 rounded-full h-2 overflow-hidden border border-amber-600/30">
           <div
             className={`h-full transition-all duration-500 rounded-full ${
-              wordCount >= targetWords ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-brand-500'
+              wordCount >= targetWords ? 'bg-blue-950 shadow-sm' : 'bg-blue-950'
             }`}
             style={{ width: `${wordProgressPercent}%` }}
           />
         </div>
       </div>
+
+      {/* Task 1 Visual Illustration Canvas (Line graph, Bar chart, Pie charts, Process diagrams, Map comparisons, Table) */}
+      {(currentPrompt.type === 'TASK_1_ACADEMIC' || currentPrompt.illustrationType) && (
+        <Task1VisualIllustration
+          promptId={currentPrompt.id}
+          illustrationType={currentPrompt.illustrationType}
+          title={currentPrompt.title}
+        />
+      )}
 
       {/* Anti-Paste Pedagogical Notification Toast */}
       {pasteBlockedWarning && (

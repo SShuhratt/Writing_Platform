@@ -160,7 +160,10 @@ export default function WorkspacePage() {
           
           {/* Left/Center 8 cols: Editor Surface Canvas */}
           <section className="lg:col-span-8 h-full">
-            <EditorSurface onSubmitTask={handleSubmitTask} />
+            <EditorSurface
+              onSubmitTask={handleSubmitTask}
+              onOpenPromptsModal={() => setIsPromptsModalOpen(true)}
+            />
           </section>
 
           {/* Right 4 cols: Real-Time Socratic Guidance Panel */}
