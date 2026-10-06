@@ -25,7 +25,7 @@ STRICT PEDAGOGICAL GUARDRAILS:
 
 EVALUATION FOCUS AREAS FOR LIVE WRITING:
 - Topic Sentence & Structural Check: Check if paragraph opening sentences have clear discourse markers/transitions.
-- 2-Sentence & 50-Word Milestones: Evaluate whether assertions are backed by extending explanations or examples.
+- 2-Sentence & 30-Word Milestones: Evaluate whether assertions are backed by extending explanations or examples.
 - Introduction & Conclusion Checks: Verify thesis statement in Introduction and thesis synthesis in Conclusion.
 - Lexical Resource Elevation: Highlight overused simple words and suggest academic register categories.
 

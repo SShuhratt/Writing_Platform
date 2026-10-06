@@ -41,7 +41,7 @@ Key Differentiators:
     - Triggers activate upon:
         a) Completion of a paragraph (pressing Enter/Return twice).
         b) Pause in typing exceeding 30–45 seconds.
-        c) Reaching specific word count thresholds (e.g., minimum 50 words to begin evaluation).
+        c) Reaching specific word count thresholds (e.g., minimum 30 words to begin evaluation, and every 30-word interval).
 
 3.2 Scenario A: Writing Below Selected Level
     - Platform Action: Generates pedagogical, non-directive suggestions matched strictly to the target band requirements.

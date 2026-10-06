@@ -52,7 +52,7 @@ export const WorkflowPillars: React.FC = () => {
             </div>
             <h3 className="font-bold text-lg text-slate-900 dark:text-white">Real-Time Socratic Drafting</h3>
             <p className="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">
-              Receive live, non-intrusive conceptual questions after topic sentences, 2 sentences, 50 words, and paragraph completion.
+              Receive live, non-intrusive conceptual questions after topic sentences, 2 sentences, 30 words, and paragraph completion.
             </p>
             <ul className="space-y-2 text-xs text-slate-600 dark:text-gray-400 pt-2 border-t border-slate-200 dark:border-gray-800">
               <li className="flex items-center gap-2">

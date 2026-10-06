@@ -50,7 +50,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const prevParagraphCountRef = useRef<number>(0);
   const lastEvaluatedSentenceCountRef = useRef<number>(0);
-  const lastEvaluated50WordBucketRef = useRef<number>(0);
+  const lastEvaluated30WordBucketRef = useRef<number>(0);
   const lastEvaluatedTopicSentenceParaIndexRef = useRef<number>(0);
   const checkedConclusionRef = useRef<boolean>(false);
 
@@ -59,7 +59,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
     if (essayText.length === 0) {
       prevParagraphCountRef.current = 0;
       lastEvaluatedSentenceCountRef.current = 0;
-      lastEvaluated50WordBucketRef.current = 0;
+      lastEvaluated30WordBucketRef.current = 0;
       lastEvaluatedTopicSentenceParaIndexRef.current = 0;
       checkedConclusionRef.current = false;
     }
@@ -168,12 +168,12 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
     let shouldTriggerImmediately = false;
     let triggerReason = '';
 
-    // Trigger Condition 1: EACH 50 Words Milestone (50, 100, 150, 200, 250, 300...)
-    const current50Bucket = Math.floor(currentWords / 50);
-    if (current50Bucket > lastEvaluated50WordBucketRef.current && current50Bucket > 0) {
-      lastEvaluated50WordBucketRef.current = current50Bucket;
+    // Trigger Condition 1: EACH 30 Words Milestone (30, 60, 90, 120, 150, 180, 210, 240, 270, 300...)
+    const current30Bucket = Math.floor(currentWords / 30);
+    if (current30Bucket > lastEvaluated30WordBucketRef.current && current30Bucket > 0) {
+      lastEvaluated30WordBucketRef.current = current30Bucket;
       shouldTriggerImmediately = true;
-      triggerReason = `Milestone: ${current50Bucket * 50} Words Reached`;
+      triggerReason = `Milestone: ${current30Bucket * 30} Words Reached`;
     }
 
     // Trigger Condition 2: EACH 2 Complete Sentences Milestone (at 2, 4, 6, 8, 10 sentences...)
@@ -213,8 +213,8 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
     }
 
     // Normalize milestone refs if user deleted/backspaced text
-    if (current50Bucket < lastEvaluated50WordBucketRef.current) {
-      lastEvaluated50WordBucketRef.current = current50Bucket;
+    if (current30Bucket < lastEvaluated30WordBucketRef.current) {
+      lastEvaluated30WordBucketRef.current = current30Bucket;
     }
     if (currentSentences < lastEvaluatedSentenceCountRef.current) {
       lastEvaluatedSentenceCountRef.current = currentSentences;
@@ -416,7 +416,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
           onDrop={handleDrop}
           placeholder={
             assistanceMode === 'ACTIVE_ASSISTANT'
-              ? `Start drafting your Band ${targetBand} response here... Live Socratic feedback triggers continuously for each topic sentence, 2 sentences, 50 words, and paragraph completion.`
+              ? `Start drafting your Band ${targetBand} response here... Live Socratic feedback triggers continuously for each topic sentence, 2 sentences, 30 words, and paragraph completion.`
               : `Focus Exam Mode Active: Live feedback is muted. Draft under exam conditions and click "Submit Task" when finished.`
           }
           className="w-full flex-1 p-6 rounded-2xl bg-white dark:bg-gray-900/80 border border-slate-200 dark:border-gray-800 text-slate-900 dark:text-gray-100 text-base leading-relaxed focus:outline-none focus:border-brand-500/80 placeholder-slate-400 dark:placeholder-gray-600 resize-none font-sans shadow-sm dark:shadow-inner tracking-wide"

@@ -80,7 +80,7 @@ export const SocraticSidePanel: React.FC = () => {
             <p className="text-xs">
               {isAnalyzing 
                 ? `Evaluating text against Band ${targetBand} criteria...` 
-                : `Type at least 50 words or complete a paragraph to trigger live Socratic mentorship cards.`}
+                : `Type at least 30 words or complete a paragraph to trigger live Socratic mentorship cards.`}
             </p>
           </div>
         ) : (
