@@ -4,6 +4,13 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "IELTS Writing Assistant Platform | Adaptive Real-Time AI Mentor",
   description: "Adaptive real-time writing environment for IELTS Task 1 and Task 2. Socratic mentorship grounded strictly in target band scores (5.0–9.0).",
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/brand-logo.png', type: 'image/png' },
+    ],
+    apple: '/apple-icon.png',
+  },
 };
 
 export default function RootLayout({
