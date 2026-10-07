@@ -40,6 +40,18 @@ export const Footer: React.FC = () => {
           >
             Practice Workspace
           </button>
+          <Link
+            href="/privacy"
+            className="hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            href="/terms"
+            className="hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            Terms of Service
+          </Link>
         </div>
 
         <div className="text-xs text-slate-500 dark:text-gray-500">

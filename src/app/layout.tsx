@@ -32,6 +32,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen bg-background text-foreground flex flex-col">
         {children}
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
       </body>
     </html>
   );

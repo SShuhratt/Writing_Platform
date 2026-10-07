@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useWritingStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth-service';
 import { TargetBand } from '@/types/ielts';
@@ -15,6 +16,12 @@ import {
   ArrowRight,
   Zap
 } from 'lucide-react';
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
 
 export const AuthModals: React.FC = () => {
   const { authModalMode, setAuthModalMode, setCurrentUser } = useWritingStore();
@@ -32,6 +39,69 @@ export const AuthModals: React.FC = () => {
   const [resetMsg, setResetMsg] = useState('');
 
   const [error, setError] = useState('');
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '1064108249362-jafv9f37fdqtg81kh7vjf46ppvbmdido.apps.googleusercontent.com';
+
+  // Initialize Google Identity Services button
+  useEffect(() => {
+    if (!authModalMode || (authModalMode !== 'LOGIN' && authModalMode !== 'REGISTER')) return;
+
+    const initGoogle = () => {
+      if (typeof window !== 'undefined' && window.google?.accounts?.id && googleClientId) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: (response: any) => {
+              if (!response?.credential) return;
+              try {
+                // Decode base64 JWT payload
+                const base64Url = response.credential.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(
+                  atob(base64)
+                    .split('')
+                    .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                    .join('')
+                );
+                const data = JSON.parse(jsonPayload);
+                const res = AuthService.loginWithGoogle({
+                  email: data.email,
+                  name: data.name,
+                  sub: data.sub,
+                });
+                if (res.success && res.user) {
+                  setCurrentUser(res.user);
+                  handleClose();
+                }
+              } catch (parseErr) {
+                console.error('Failed to parse Google credential token:', parseErr);
+                setError('Google authentication succeeded, but profile parsing failed.');
+              }
+            },
+          });
+
+          if (googleBtnRef.current) {
+            googleBtnRef.current.innerHTML = '';
+            window.google.accounts.id.renderButton(googleBtnRef.current, {
+              theme: 'outline',
+              size: 'large',
+              width: 320,
+              text: authModalMode === 'REGISTER' ? 'signup_with' : 'signin_with',
+              shape: 'pill',
+            });
+          }
+        } catch (e) {
+          console.warn('Could not initialize Google Identity Services:', e);
+        }
+      }
+    };
+
+    // Attempt immediately and with retry if script is still loading
+    initGoogle();
+    const timer = setTimeout(initGoogle, 600);
+    return () => clearTimeout(timer);
+  }, [authModalMode, googleClientId]);
 
   if (!authModalMode) return null;
 
@@ -113,6 +183,26 @@ export const AuthModals: React.FC = () => {
           <div className="p-3 mb-4 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-500/30 text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2">
             <ShieldAlert className="h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {/* Google Authentication Section */}
+        {(authModalMode === 'LOGIN' || authModalMode === 'REGISTER') && (
+          <div className="mb-4">
+            <div className="flex justify-center min-h-[44px] items-center">
+              <div ref={googleBtnRef} className="w-full flex justify-center" />
+            </div>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200 dark:border-gray-800" />
+              </div>
+              <div className="relative flex justify-center text-[11px] uppercase tracking-wider font-semibold">
+                <span className="bg-white dark:bg-gray-900 px-3 text-slate-500 dark:text-gray-400">
+                  Or continue with email
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -282,6 +372,14 @@ export const AuthModals: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* Terms and Privacy Policy Links */}
+        <div className="pt-3 mt-1 border-t border-slate-100 dark:border-gray-800 text-[11px] text-center text-slate-500 dark:text-gray-400">
+          By continuing, you agree to our{' '}
+          <Link href="/terms" onClick={handleClose} className="underline hover:text-slate-900 dark:hover:text-white font-medium">Terms of Service</Link>{' '}
+          and{' '}
+          <Link href="/privacy" onClick={handleClose} className="underline hover:text-slate-900 dark:hover:text-white font-medium">Privacy Policy</Link>.
+        </div>
 
       </div>
     </div>

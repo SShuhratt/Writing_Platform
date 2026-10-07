@@ -85,6 +85,22 @@ export class AuthService {
     return { success: true, user };
   }
 
+  static loginWithGoogle(googleData: { email: string; name: string; sub?: string }): { success: boolean; user: User } {
+    const cleanEmail = googleData.email.trim().toLowerCase();
+    const user: User = {
+      id: `google-${googleData.sub || Date.now()}`,
+      username: cleanEmail.split('@')[0],
+      email: cleanEmail,
+      fullName: googleData.name || cleanEmail.split('@')[0],
+      role: 'user',
+      targetBand: '7.5',
+      createdAt: Date.now()
+    };
+
+    this.storeUser(user);
+    return { success: true, user };
+  }
+
   static resetPassword(email: string): { success: boolean; message: string } {
     return {
       success: true,
