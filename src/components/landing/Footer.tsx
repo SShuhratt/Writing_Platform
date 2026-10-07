@@ -2,8 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { GraduationCap } from 'lucide-react';
 import { useWritingStore } from '@/lib/store';
 
 export const Footer: React.FC = () => {
@@ -24,8 +24,13 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
         
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white">
-            <GraduationCap className="h-5 w-5" />
+          <div className="relative h-9 w-9 rounded-xl overflow-hidden shadow-md border border-brand-500/20">
+            <Image
+              src="/brand-logo.png"
+              alt="IELTS Mentor AI Logo"
+              fill
+              className="object-cover"
+            />
           </div>
           <div>
             <div className="font-bold text-sm text-slate-900 dark:text-white">IELTS Mentor AI</div>

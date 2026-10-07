@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useWritingStore } from '@/lib/store';
 import { ALL_TARGET_BANDS, OFFICIAL_IELTS_RUBRICS } from '@/lib/ielts-rubric';
 import { TargetBand } from '@/types/ielts';
@@ -12,7 +13,6 @@ import {
   BookOpen, 
   RotateCcw, 
   Zap,
-  GraduationCap,
   LogIn,
   UserCheck,
   LogOut,
@@ -55,8 +55,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Left: Branding & Current Prompt Indicator */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-all">
-              <GraduationCap className="h-5 w-5 text-white" />
+            <div className="relative h-10 w-10 rounded-xl overflow-hidden shadow-lg shadow-brand-500/20 border border-brand-500/30 group-hover:scale-105 transition-all">
+              <Image
+                src="/brand-logo.png"
+                alt="IELTS Mentor AI Logo"
+                fill
+                className="object-cover"
+                priority
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
