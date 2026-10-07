@@ -149,6 +149,78 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
     triggerPasteBlockedWarning();
   };
 
+  // Keyboard shortcut handler: Tab key creates paragraph indent (4 spaces) like Word instead of shifting focus
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+
+      const textarea = e.currentTarget;
+      const { selectionStart, selectionEnd, value } = textarea;
+      const tabSpacing = '    '; // Standard 4 spaces paragraph indentation
+
+      if (e.shiftKey) {
+        // Shift + Tab: Outdent
+        const beforeCursor = value.substring(0, selectionStart);
+        if (beforeCursor.endsWith(tabSpacing)) {
+          const newText = beforeCursor.slice(0, -tabSpacing.length) + value.substring(selectionStart);
+          updateEssayText(newText);
+          const newPos = selectionStart - tabSpacing.length;
+          requestAnimationFrame(() => {
+            textarea.selectionStart = textarea.selectionEnd = newPos;
+          });
+        } else if (beforeCursor.endsWith(' ')) {
+          const match = beforeCursor.match(/ +$/);
+          const spacesToRemove = match ? Math.min(match[0].length, tabSpacing.length) : 0;
+          if (spacesToRemove > 0) {
+            const newText = beforeCursor.slice(0, -spacesToRemove) + value.substring(selectionStart);
+            updateEssayText(newText);
+            const newPos = selectionStart - spacesToRemove;
+            requestAnimationFrame(() => {
+              textarea.selectionStart = textarea.selectionEnd = newPos;
+            });
+          }
+        }
+        return;
+      }
+
+      // Tab: Indent (Insert 4 spaces at cursor)
+      if (selectionStart === selectionEnd) {
+        const newText = value.substring(0, selectionStart) + tabSpacing + value.substring(selectionEnd);
+        updateEssayText(newText);
+
+        if (!isTimerRunning && newText.length > 0) {
+          setTimerRunning(true);
+        }
+
+        const newPos = selectionStart + tabSpacing.length;
+        requestAnimationFrame(() => {
+          textarea.selectionStart = textarea.selectionEnd = newPos;
+        });
+      } else {
+        // Multi-line selection or block indentation
+        const startLineIndex = value.lastIndexOf('\n', selectionStart - 1) + 1;
+        const endLineIndex = value.indexOf('\n', selectionEnd);
+        const actualEndIndex = endLineIndex === -1 ? value.length : endLineIndex;
+
+        const selectedBlock = value.substring(startLineIndex, actualEndIndex);
+        const lines = selectedBlock.split('\n');
+        const indentedLines = lines.map(line => tabSpacing + line).join('\n');
+
+        const newText = value.substring(0, startLineIndex) + indentedLines + value.substring(actualEndIndex);
+        updateEssayText(newText);
+
+        if (!isTimerRunning && newText.length > 0) {
+          setTimerRunning(true);
+        }
+
+        requestAnimationFrame(() => {
+          textarea.selectionStart = startLineIndex;
+          textarea.selectionEnd = startLineIndex + indentedLines.length;
+        });
+      }
+    }
+  };
+
   // Continuous Multi-Condition Trigger Engine
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
@@ -412,6 +484,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
         <textarea
           value={essayText}
           onChange={handleTextChange}
+          onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           onDrop={handleDrop}
           placeholder={
