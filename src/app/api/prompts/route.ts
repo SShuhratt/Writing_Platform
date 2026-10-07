@@ -3,23 +3,42 @@ import { getTursoClient, isTursoConfigured } from '@/lib/turso';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 import { OFFICIAL_PROMPTS_DATABASE } from '@/lib/prompts-database';
 import { IELTSTaskPrompt } from '@/types/ielts';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export async function GET(request: NextRequest) {
+  // 1. Rate Limiting Protection (60 requests / min per IP)
+  const rateLimitResult = checkRateLimit(request, {
+    limit: 60,
+    windowMs: 60 * 1000,
+    prefix: 'prompts_get',
+  });
+  if (!rateLimitResult.allowed) {
+    return rateLimitResponse(rateLimitResult);
+  }
+
   try {
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type'); // 'TASK_1_ACADEMIC', 'TASK_1_GENERAL', 'TASK_2_ESSAY', or 'TASK_1'
+    const type = searchParams.get('type');
     const category = searchParams.get('category');
-    const search = searchParams.get('search')?.toLowerCase().trim() || '';
-    const limit = parseInt(searchParams.get('limit') || '250', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const rawSearch = searchParams.get('search')?.toLowerCase().trim() || '';
+    
+    // Sanitize search query against wildcard or excessive length abuse
+    const search = rawSearch.slice(0, 100).replace(/[%_]/g, '\\$&');
 
-    // 1. Try Turso LibSQL Database first if configured
+    // Strict boundary checks on limit and offset to mitigate malicious mass data extraction & memory exhaustion
+    const rawLimit = parseInt(searchParams.get('limit') || '250', 10);
+    const limit = Math.min(Math.max(1, isNaN(rawLimit) ? 50 : rawLimit), 250);
+
+    const rawOffset = parseInt(searchParams.get('offset') || '0', 10);
+    const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
+
+    // 1. Try Turso LibSQL Database first if configured (Parameterized Queries to prevent SQL Injection)
     if (isTursoConfigured()) {
       const turso = getTursoClient();
       if (turso) {
         try {
-          let whereClauses: string[] = [];
-          let args: any[] = [];
+          const whereClauses: string[] = [];
+          const args: any[] = [];
 
           if (type) {
             if (type === 'TASK_1') {
@@ -55,7 +74,7 @@ export async function GET(request: NextRequest) {
               category: String(row.category),
               questionText: String(row.question_text),
               chartDescription: row.chart_description ? String(row.chart_description) : undefined,
-              illustrationType: row.illustration_type ? row.illustration_type as any : undefined,
+              illustrationType: row.illustration_type ? (row.illustration_type as any) : undefined,
               minWordCount: Number(row.min_word_count || 250),
               recommendedTimeMinutes: Number(row.recommended_time_minutes || 40),
             }));
@@ -97,26 +116,25 @@ export async function GET(request: NextRequest) {
           }
 
           query = query.order('id', { ascending: true }).range(offset, offset + limit - 1);
-
-          const { data, error, count } = await query;
+          const { data, count, error } = await query;
 
           if (!error && data && data.length > 0) {
             const prompts: IELTSTaskPrompt[] = data.map((row: any) => ({
-              id: row.id,
-              title: row.title,
+              id: String(row.id),
+              title: String(row.title),
               type: row.type,
-              category: row.category,
-              questionText: row.question_text,
-              chartDescription: row.chart_description || undefined,
-              illustrationType: row.illustration_type || undefined,
-              minWordCount: row.min_word_count,
-              recommendedTimeMinutes: row.recommended_time_minutes,
+              category: String(row.category),
+              questionText: String(row.question_text),
+              chartDescription: row.chart_description ? String(row.chart_description) : undefined,
+              illustrationType: row.illustration_type,
+              minWordCount: Number(row.min_word_count || 250),
+              recommendedTimeMinutes: Number(row.recommended_time_minutes || 40),
             }));
 
             return NextResponse.json({
               success: true,
               prompts,
-              total: count ?? prompts.length,
+              total: count || prompts.length,
               source: 'supabase',
             });
           }
@@ -126,7 +144,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 3. Fallback to in-memory OFFICIAL_PROMPTS_DATABASE (all 160 items)
+    // 3. Fallback to in-memory OFFICIAL_PROMPTS_DATABASE
     let filtered = OFFICIAL_PROMPTS_DATABASE;
 
     if (type) {
@@ -174,10 +192,21 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // 1. Rate Limiting Protection (10 requests / min per IP to prevent spamming DB)
+  const rateLimitResult = checkRateLimit(request, {
+    limit: 10,
+    windowMs: 60 * 1000,
+    prefix: 'prompts_post',
+  });
+  if (!rateLimitResult.allowed) {
+    return rateLimitResponse(rateLimitResult);
+  }
+
   try {
     const body = await request.json();
     const { title, type, category, questionText, minWordCount, recommendedTimeMinutes } = body;
 
+    // Strict input validation & sanitization
     if (!title || !questionText || !type) {
       return NextResponse.json(
         { success: false, error: 'Missing required prompt fields (title, type, questionText)' },
@@ -185,15 +214,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const validTypes = ['TASK_1_ACADEMIC', 'TASK_1_GENERAL', 'TASK_2_ESSAY'];
+    if (!validTypes.includes(type)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid IELTS prompt type specified' },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedTitle = String(title).slice(0, 180).trim().replace(/[<>]/g, '');
+    const sanitizedQuestion = String(questionText).slice(0, 2500).trim().replace(/[<>]/g, '');
+    const sanitizedCategory = String(category || 'Custom Practice Task').slice(0, 80).trim().replace(/[<>]/g, '');
+    const sanitizedMinWord = Math.min(Math.max(50, Number(minWordCount) || (type === 'TASK_2_ESSAY' ? 250 : 150)), 600);
+    const sanitizedTime = Math.min(Math.max(5, Number(recommendedTimeMinutes) || (type === 'TASK_2_ESSAY' ? 40 : 20)), 120);
+
     const newPromptId = `custom-${Date.now()}`;
     const newPrompt: IELTSTaskPrompt = {
       id: newPromptId,
-      title,
+      title: sanitizedTitle,
       type,
-      category: category || 'Custom Practice Task',
-      questionText,
-      minWordCount: minWordCount || (type === 'TASK_2_ESSAY' ? 250 : 150),
-      recommendedTimeMinutes: recommendedTimeMinutes || (type === 'TASK_2_ESSAY' ? 40 : 20),
+      category: sanitizedCategory,
+      questionText: sanitizedQuestion,
+      minWordCount: sanitizedMinWord,
+      recommendedTimeMinutes: sanitizedTime,
     };
 
     if (isTursoConfigured()) {

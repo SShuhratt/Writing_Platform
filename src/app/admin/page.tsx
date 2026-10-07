@@ -38,14 +38,14 @@ export default function AdminDashboardPage() {
     }
   }, [setCurrentUser]);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    const res = AuthService.login(adminUsername, adminPassword);
+    const res = await AuthService.login(adminUsername, adminPassword);
     if (res.success && res.user && res.user.role === 'admin') {
       setCurrentUser(res.user);
     } else {
-      setLoginError('Invalid Admin credentials.');
+      setLoginError(res.error || 'Invalid Admin credentials.');
     }
   };
 

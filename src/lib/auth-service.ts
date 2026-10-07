@@ -1,18 +1,6 @@
 import { User } from '@/types/auth';
 import { TargetBand } from '@/types/ielts';
 
-export const DEFAULT_ADMIN_USER: User = {
-  id: 'admin-shuhrat3',
-  username: 'shuhrat3',
-  email: 'admin@ieltsmentor.ai',
-  fullName: 'Shuhrat (Platform Admin)',
-  role: 'admin',
-  targetBand: '9.0',
-  createdAt: Date.now()
-};
-
-export const DEFAULT_ADMIN_PASS = '$Huhrat333';
-
 /**
  * Local Authentication Manager
  */
@@ -39,36 +27,56 @@ export class AuthService {
     localStorage.removeItem(this.AUTH_KEY);
   }
 
-  static login(identifier: string, pass: string): { success: boolean; user?: User; error?: string } {
+  /**
+   * Secure server-side authentication verifying credentials via /api/auth/login
+   * Protects admin passwords from client-side JS reverse engineering and provides brute-force rate limiting.
+   */
+  static async login(identifier: string, pass: string): Promise<{ success: boolean; user?: User; error?: string }> {
     const cleanId = identifier.trim().toLowerCase();
 
-    // Check Default Admin Credentials
-    if ((cleanId === 'shuhrat3' || cleanId === 'admin@ieltsmentor.ai') && pass === DEFAULT_ADMIN_PASS) {
-      this.storeUser(DEFAULT_ADMIN_USER);
-      return { success: true, user: DEFAULT_ADMIN_USER };
-    }
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: cleanId, password: pass }),
+      });
 
-    // Standard User Login Mock
-    if (pass.length >= 4) {
-      const user: User = {
-        id: `user-${Date.now()}`,
-        username: cleanId.split('@')[0] || 'student',
-        email: cleanId.includes('@') ? cleanId : `${cleanId}@example.com`,
-        fullName: cleanId.split('@')[0].toUpperCase(),
-        role: 'user',
-        targetBand: '7.0',
-        createdAt: Date.now()
+      const data = await res.json();
+      if (res.ok && data.success && data.user) {
+        this.storeUser(data.user);
+        return { success: true, user: data.user };
+      }
+
+      return {
+        success: false,
+        error: data.message || data.error || 'Invalid email/username or password'
       };
-      this.storeUser(user);
-      return { success: true, user };
+    } catch (err: any) {
+      // Offline fallback for standard practice sessions
+      if (pass.length >= 4) {
+        const user: User = {
+          id: `user-${Date.now()}`,
+          username: cleanId.split('@')[0] || 'student',
+          email: cleanId.includes('@') ? cleanId : `${cleanId}@example.com`,
+          fullName: cleanId.split('@')[0].toUpperCase(),
+          role: 'user',
+          targetBand: '7.0',
+          createdAt: Date.now()
+        };
+        this.storeUser(user);
+        return { success: true, user };
+      }
+      return { success: false, error: 'Network error during login. Please try again.' };
     }
-
-    return { success: false, error: 'Invalid email/username or password' };
   }
 
   static register(fullName: string, email: string, pass: string, targetBand: TargetBand): { success: boolean; user?: User; error?: string } {
     if (!fullName || !email || !pass) {
       return { success: false, error: 'Please fill in all required fields' };
+    }
+
+    if (pass.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters' };
     }
 
     const user: User = {

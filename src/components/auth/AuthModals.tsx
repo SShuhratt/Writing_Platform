@@ -112,10 +112,10 @@ export const AuthModals: React.FC = () => {
     setAuthModalMode(null);
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const res = AuthService.login(loginIdentifier, loginPass);
+    const res = await AuthService.login(loginIdentifier, loginPass);
     if (res.success && res.user) {
       setCurrentUser(res.user);
       handleClose();

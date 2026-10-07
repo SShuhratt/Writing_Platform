@@ -2,12 +2,38 @@ import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { calculateOverallBandScore } from '@/lib/ielts-rubric';
 import { generateMockSubmissionEvaluation } from '@/lib/ai-service';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import {
+  sanitizeEssayInput,
+  sanitizeTargetBand,
+  sanitizeTaskPrompt,
+  LLM_ANTI_INJECTION_DIRECTIVES,
+} from '@/lib/security-sanitize';
 
 export async function POST(req: Request) {
+  // 1. Rate Limiting Protection (6 evaluation submissions / min per IP)
+  const rateLimitResult = checkRateLimit(req, {
+    limit: 6,
+    windowMs: 60 * 1000,
+    prefix: 'evaluation',
+  });
+  if (!rateLimitResult.allowed) {
+    return rateLimitResponse(rateLimitResult);
+  }
+
   let bodyData: any = {};
   try {
     bodyData = await req.json();
-    const { essayText, targetBand, prompt, mode } = bodyData;
+    const { essayText: rawEssay, targetBand: rawBand, prompt: rawPrompt, mode } = bodyData;
+
+    // 2. Input Sanitization & Anti-Injection Guardrails
+    const { cleanText: essayText, isValid, error } = sanitizeEssayInput(rawEssay);
+    if (!isValid) {
+      return NextResponse.json({ error }, { status: 400 });
+    }
+
+    const targetBand = sanitizeTargetBand(rawBand);
+    const prompt = sanitizeTaskPrompt(rawPrompt);
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -24,6 +50,8 @@ export async function POST(req: Request) {
     const systemPrompt = `You are a Senior IELTS Examiner and Master IELTS Writing Coach.
 You must perform an ultra-detailed, highly actionable Dual-Layer Assessment.
 
+${LLM_ANTI_INJECTION_DIRECTIVES}
+
 STRICT INSTRUCTION: NEVER provide generic boilerplate advice (such as "read more", "practice under timed conditions", or referring to "Body Paragraph 2" if the student did not write one!).
 All feedback, lexical suggestions, grammatical boosters, and roadmap steps MUST be explicitly tailored to the candidate's actual text, word count, and paragraphing.
 
@@ -32,10 +60,11 @@ DRAFT METRICS:
 - Detected Paragraphs: ${paragraphs.length} (Standard IELTS Structure: 4 paragraphs)
 - Target Band: ${targetBand}
 - Prompt: "${prompt.title}" — ${prompt.questionText}
-- Candidate Draft:
-"""
+
+CANDIDATE ESSAY:
+<candidate_essay>
 ${essayText}
-"""
+</candidate_essay>
 
 LAYER 1: Objective Examiner Band Score (1.0 to 9.0) across standard IELTS criteria:
 - Task Response / Achievement (penalize if words < ${prompt.minWordCount})
@@ -176,8 +205,8 @@ Respond ONLY with valid JSON matching this schema:
       return NextResponse.json(
         generateMockSubmissionEvaluation(
           bodyData.essayText,
-          bodyData.targetBand || '7.0',
-          bodyData.prompt,
+          sanitizeTargetBand(bodyData.targetBand),
+          sanitizeTaskPrompt(bodyData.prompt),
           bodyData.mode || 'ACTIVE_ASSISTANT'
         )
       );

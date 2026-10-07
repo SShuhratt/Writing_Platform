@@ -1,12 +1,38 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { generateMockSocraticGuidance } from '@/lib/ai-service';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import {
+  sanitizeEssayInput,
+  sanitizeTargetBand,
+  sanitizeTaskPrompt,
+  LLM_ANTI_INJECTION_DIRECTIVES,
+} from '@/lib/security-sanitize';
 
 export async function POST(req: Request) {
+  // 1. Rate Limiting Protection (30 requests / min per IP)
+  const rateLimitResult = checkRateLimit(req, {
+    limit: 30,
+    windowMs: 60 * 1000,
+    prefix: 'guidance',
+  });
+  if (!rateLimitResult.allowed) {
+    return rateLimitResponse(rateLimitResult);
+  }
+
   let bodyData: any = {};
   try {
     bodyData = await req.json();
-    const { essayText, targetBand, prompt } = bodyData;
+    const { essayText: rawEssay, targetBand: rawBand, prompt: rawPrompt } = bodyData;
+
+    // 2. Input Sanitization & Anti-Injection Guardrails
+    const { cleanText: essayText, isValid, error } = sanitizeEssayInput(rawEssay);
+    if (!isValid) {
+      return NextResponse.json({ error }, { status: 400 });
+    }
+
+    const targetBand = sanitizeTargetBand(rawBand);
+    const prompt = sanitizeTaskPrompt(rawPrompt);
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -18,6 +44,9 @@ export async function POST(req: Request) {
     const candidateModels = ['gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
 
     const systemPrompt = `You are the Real-Time Socratic Mentor for an IELTS Writing Assistant Platform.
+
+${LLM_ANTI_INJECTION_DIRECTIVES}
+
 STRICT PEDAGOGICAL GUARDRAILS:
 1. You MUST NOT under any circumstances provide rewritten sentences, ready-to-use phrases, direct replacements, or copy-paste text.
 2. Provide ONLY conceptual, instructional, and Socratic guidance. Ask thought-provoking questions to guide the student's own revision.
@@ -29,11 +58,13 @@ EVALUATION FOCUS AREAS FOR LIVE WRITING:
 - Introduction & Conclusion Checks: Verify thesis statement in Introduction and thesis synthesis in Conclusion.
 - Lexical Resource Elevation: Highlight overused simple words and suggest academic register categories.
 
-TASK PROMPT: ${prompt.title} (${prompt.questionText})
-CURRENT STUDENT ESSAY:
-"""
+TASK PROMPT:
+${prompt.title} (${prompt.questionText})
+
+CANDIDATE ESSAY:
+<candidate_essay>
 ${essayText}
-"""
+</candidate_essay>
 
 Evaluate the essay against Band ${targetBand} IELTS criteria:
 - Task Achievement / Response (TA/TR)
@@ -90,7 +121,13 @@ Respond with valid JSON using this structure:
   } catch (error: any) {
     console.error('Error in /api/guidance, falling back to mock Socratic guidance:', error?.message);
     if (bodyData?.essayText && bodyData?.prompt) {
-      return NextResponse.json(generateMockSocraticGuidance(bodyData.essayText, bodyData.targetBand || '7.0', bodyData.prompt));
+      return NextResponse.json(
+        generateMockSocraticGuidance(
+          bodyData.essayText,
+          sanitizeTargetBand(bodyData.targetBand),
+          sanitizeTaskPrompt(bodyData.prompt)
+        )
+      );
     }
     return NextResponse.json({ error: error?.message || 'Failed to generate guidance' }, { status: 500 });
   }
