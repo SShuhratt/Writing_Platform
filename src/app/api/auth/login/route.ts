@@ -31,25 +31,32 @@ export async function POST(req: Request) {
     const cleanId = String(identifier).trim().toLowerCase();
     const cleanPass = String(password);
 
-    // 2. Admin Verification (Server-Side Only - Secret never exposed to browser)
-    if (
-      (cleanId === ADMIN_USERNAME.toLowerCase() || cleanId === ADMIN_EMAIL.toLowerCase()) &&
-      cleanPass === ADMIN_PASSWORD
-    ) {
-      const adminUser: User = {
-        id: 'admin-shuhrat3',
-        username: ADMIN_USERNAME,
-        email: ADMIN_EMAIL,
-        fullName: 'Shuhrat (Platform Admin)',
-        role: 'admin',
-        targetBand: '9.0',
-        createdAt: Date.now(),
-      };
+    const isAdminId =
+      cleanId === ADMIN_USERNAME.toLowerCase() || cleanId === ADMIN_EMAIL.toLowerCase();
 
-      return NextResponse.json({
-        success: true,
-        user: adminUser,
-      });
+    // 2. Admin Verification (Server-Side Only - Secret never exposed to browser)
+    if (isAdminId) {
+      if (cleanPass === ADMIN_PASSWORD) {
+        const adminUser: User = {
+          id: 'admin-shuhrat3',
+          username: ADMIN_USERNAME,
+          email: ADMIN_EMAIL,
+          fullName: 'Shuhrat (Platform Admin)',
+          role: 'admin',
+          targetBand: '9.0',
+          createdAt: Date.now(),
+        };
+
+        return NextResponse.json({
+          success: true,
+          user: adminUser,
+        });
+      }
+
+      return NextResponse.json(
+        { success: false, error: 'Invalid credentials. Please verify your details.' },
+        { status: 401 }
+      );
     }
 
     // 3. Standard User Login Verification
