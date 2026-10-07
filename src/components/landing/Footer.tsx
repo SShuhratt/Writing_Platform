@@ -23,8 +23,8 @@ export const Footer: React.FC = () => {
     <footer className="border-t border-slate-200 dark:border-gray-800/80 bg-slate-100 dark:bg-gray-950 py-12 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
         
-        <div className="flex items-center gap-3">
-          <div className="relative h-9 w-9 rounded-xl overflow-hidden shadow-md border border-brand-500/20">
+        <div className="flex items-center gap-3.5">
+          <div className="relative h-12 w-12 rounded-2xl overflow-hidden shadow-lg border border-brand-500/30 flex-shrink-0">
             <Image
               src="/brand-logo.png"
               alt="IELTS Mentor AI Logo"
@@ -33,8 +33,8 @@ export const Footer: React.FC = () => {
             />
           </div>
           <div>
-            <div className="font-bold text-sm text-slate-900 dark:text-white">IELTS Mentor AI</div>
-            <div className="text-[11px] text-slate-500 dark:text-gray-400">Adaptive Real-Time Socratic Platform</div>
+            <div className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">IELTS Mentor AI</div>
+            <div className="text-xs text-slate-500 dark:text-gray-400 font-medium">Adaptive Real-Time Socratic Platform</div>
           </div>
         </div>
 

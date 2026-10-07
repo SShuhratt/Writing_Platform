@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useWritingStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth-service';
 import { TargetBand } from '@/types/ielts';
@@ -155,6 +156,22 @@ export const AuthModals: React.FC = () => {
         >
           <X className="h-5 w-5" />
         </button>
+
+        {/* Brand Header */}
+        <div className="flex items-center gap-3 mb-5 pr-8">
+          <div className="relative h-11 w-11 rounded-xl overflow-hidden shadow-md border border-brand-500/30 flex-shrink-0">
+            <Image
+              src="/brand-logo.png"
+              alt="IELTS Mentor AI Logo"
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">IELTS Mentor AI</h3>
+            <p className="text-xs text-slate-500 dark:text-gray-400 font-medium">Official Adaptive Platform</p>
+          </div>
+        </div>
 
         {/* Modal Navigation Tabs */}
         <div className="flex items-center gap-1 bg-slate-100 dark:bg-gray-900/90 p-1 rounded-xl border border-slate-200 dark:border-gray-800 mb-6">

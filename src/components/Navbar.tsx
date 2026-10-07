@@ -54,8 +54,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         
         {/* Left: Branding & Current Prompt Indicator */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="relative h-10 w-10 rounded-xl overflow-hidden shadow-lg shadow-brand-500/20 border border-brand-500/30 group-hover:scale-105 transition-all">
+          <Link href="/" className="flex items-center gap-3 sm:gap-3.5 group">
+            <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-2xl overflow-hidden shadow-xl shadow-brand-500/20 border-2 border-brand-500/30 group-hover:border-brand-400 group-hover:scale-105 transition-all flex-shrink-0">
               <Image
                 src="/brand-logo.png"
                 alt="IELTS Mentor AI Logo"
@@ -66,12 +66,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">IELTS Mentor</span>
+                <span className="font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white tracking-tight">IELTS Mentor</span>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 dark:border-brand-500/30">
                   Adaptive AI
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-gray-400">Official-Grade Platform</p>
+              <p className="text-xs text-slate-500 dark:text-gray-400 font-medium">Official-Grade Platform</p>
             </div>
           </Link>
 

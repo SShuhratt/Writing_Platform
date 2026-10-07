@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useWritingStore } from '@/lib/store';
 import { Sparkles, ArrowRight, Zap } from 'lucide-react';
 
@@ -21,10 +22,17 @@ export const HeroSection: React.FC = () => {
           {/* Left Column: Headline & CTA */}
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
             
-            {/* Top Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-300 text-xs font-semibold">
-              <Sparkles className="h-4 w-4 text-brand-400" />
-              <span>Adaptive IELTS Writing Mentor</span>
+            {/* Top Badge with Official Logo */}
+            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-700 dark:text-brand-300 text-xs font-semibold backdrop-blur-sm">
+              <div className="relative h-5 w-5 rounded-md overflow-hidden flex-shrink-0 border border-brand-500/40">
+                <Image
+                  src="/brand-logo.png"
+                  alt="IELTS Mentor AI Logo"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <span>Official-Grade Adaptive AI Mentor</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-[1.1]">
