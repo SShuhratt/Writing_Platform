@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateIELTSReportPDF, generateTelegramShareData } from '@/lib/pdf-service';
+import { DynamicBandBadge3D } from '@/components/3d';
 
 interface DualLayerReportModalProps {
   report: SubmissionReport | null;
@@ -215,12 +216,33 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
           {activeTab === 'LAYER_1' && (
             <div className="space-y-5">
               
-              {/* Overall Examiner Summary */}
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-800 space-y-2">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400">Examiner Synthesis</h4>
-                <p className="text-xs text-slate-700 dark:text-gray-300 leading-relaxed">
-                  {layer1ExaminerReport.examinerSummary}
-                </p>
+              {/* 3D Medal Achievement Showcase & Examiner Summary */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-center gap-4">
+                <div className="w-[180px] h-[180px] shrink-0">
+                  <DynamicBandBadge3D
+                    bandScore={layer1ExaminerReport.overallBand}
+                  />
+                </div>
+                <div className="flex-1 space-y-2 text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                      3D Certified Medal
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-gray-400">
+                      WebGL Physical Medal • Drag to Rotate
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-base text-slate-900 dark:text-white">
+                    {layer1ExaminerReport.overallBand >= 8 
+                      ? 'Band 8+ Mastery Achievement' 
+                      : layer1ExaminerReport.overallBand >= 7 
+                      ? 'Band 7+ Professional Competence' 
+                      : 'Band Certified Submission'}
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">
+                    {layer1ExaminerReport.examinerSummary}
+                  </p>
+                </div>
               </div>
 
               {/* 4 Official Criteria Sub-Score Cards */}

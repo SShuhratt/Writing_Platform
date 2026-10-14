@@ -10,9 +10,11 @@ import {
   GitCommit, 
   Map, 
   Table as TableIcon,
-  Info
+  Info,
+  Box
 } from 'lucide-react';
 import { IllustrationType } from '@/types/ielts';
+import { DynamicTask1Chart3D, DataPoint3D } from '@/components/3d';
 
 interface Task1VisualIllustrationProps {
   promptId: string;
@@ -28,6 +30,41 @@ export const Task1VisualIllustration: React.FC<Task1VisualIllustrationProps> = (
   compact = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [view3D, setView3D] = useState(false);
+
+  const getChartData3D = (): DataPoint3D[] => {
+    switch (promptId) {
+      case 'task1-acad-water-consumption':
+        return [
+          { label: 'Agriculture', value: 70, color: '#3b82f6' },
+          { label: 'Industrial', value: 20, color: '#6366f1' },
+          { label: 'Domestic', value: 10, color: '#10b981' },
+        ];
+      case 'task1-acad-electricity-production':
+        return [
+          { label: 'Coal', value: 42, color: '#64748b' },
+          { label: 'Gas', value: 24, color: '#f59e0b' },
+          { label: 'Nuclear', value: 19, color: '#ec4899' },
+          { label: 'Hydro', value: 11, color: '#06b6d4' },
+          { label: 'Renewables', value: 4, color: '#10b981' },
+        ];
+      case 'task1-acad-household-expenditure':
+        return [
+          { label: 'Housing', value: 32, color: '#6366f1' },
+          { label: 'Food', value: 22, color: '#f59e0b' },
+          { label: 'Transport', value: 18, color: '#3b82f6' },
+          { label: 'Health', value: 14, color: '#10b981' },
+          { label: 'Leisure', value: 14, color: '#ec4899' },
+        ];
+      default:
+        return [
+          { label: 'Sector A', value: 85, color: '#6366f1' },
+          { label: 'Sector B', value: 65, color: '#f59e0b' },
+          { label: 'Sector C', value: 45, color: '#10b981' },
+          { label: 'Sector D', value: 30, color: '#ec4899' },
+        ];
+    }
+  };
 
   // Render the appropriate diagram based on promptId or illustrationType
   const renderDiagram = () => {
@@ -86,20 +123,53 @@ export const Task1VisualIllustration: React.FC<Task1VisualIllustrationProps> = (
             {title && <span className="text-slate-400 dark:text-gray-500 hidden sm:inline">• {title}</span>}
           </div>
 
-          <button
-            onClick={() => setIsExpanded(true)}
-            className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 transition-colors"
-            title="Expand diagram for detailed examination"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Enlarge View</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-gray-800 p-0.5 rounded-lg border border-slate-200 dark:border-gray-700">
+              <button
+                onClick={() => setView3D(false)}
+                className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
+                  !view3D
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                2D Chart
+              </button>
+              <button
+                onClick={() => setView3D(true)}
+                className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-all ${
+                  view3D
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Box className="h-3 w-3" />
+                <span>3D WebGL</span>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setIsExpanded(true)}
+              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 transition-colors"
+              title="Expand diagram for detailed examination"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Enlarge</span>
+            </button>
+          </div>
         </div>
 
         {/* Diagram Container */}
         <div className="w-full flex justify-center items-center overflow-x-auto py-1">
           <div className="w-full max-w-3xl min-w-[320px]">
-            {renderDiagram()}
+            {view3D ? (
+              <DynamicTask1Chart3D
+                title={title || 'Interactive 3D Data Model'}
+                data={getChartData3D()}
+              />
+            ) : (
+              renderDiagram()
+            )}
           </div>
         </div>
 
@@ -123,17 +193,49 @@ export const Task1VisualIllustration: React.FC<Task1VisualIllustrationProps> = (
                 </span>
                 <span>{title || 'Official Task 1 Visual Illustration'}</span>
               </div>
-              <button
-                onClick={() => setIsExpanded(false)}
-                className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-gray-800 text-slate-600 dark:text-gray-300"
-              >
-                <Minimize2 className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center p-0.5 rounded-lg bg-slate-200 dark:bg-gray-800 text-[11px] font-semibold">
+                  <button
+                    onClick={() => setView3D(false)}
+                    className={`px-2.5 py-1 rounded-md transition-all ${
+                      !view3D
+                        ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                        : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    2D Chart
+                  </button>
+                  <button
+                    onClick={() => setView3D(true)}
+                    className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
+                      view3D
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Box className="w-3.5 h-3.5" />
+                    <span>3D WebGL</span>
+                  </button>
+                </div>
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-gray-800 text-slate-600 dark:text-gray-300"
+                >
+                  <Minimize2 className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             <div className="p-6 overflow-y-auto flex-1 flex justify-center items-center bg-slate-50/50 dark:bg-gray-950/20">
               <div className="w-full max-w-3xl">
-                {renderDiagram()}
+                {view3D ? (
+                  <DynamicTask1Chart3D
+                    title={title || 'Interactive 3D Data Model'}
+                    data={getChartData3D()}
+                  />
+                ) : (
+                  renderDiagram()
+                )}
               </div>
             </div>
 

@@ -1,13 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useWritingStore } from '@/lib/store';
-import { Sparkles, ArrowRight, Zap } from 'lucide-react';
+import { Sparkles, ArrowRight, Zap, Box, Eye } from 'lucide-react';
+import { DynamicHeroScene } from '@/components/3d';
 
 export const HeroSection: React.FC = () => {
   const { setAuthModalMode, currentUser } = useWritingStore();
+  const [heroView, setHeroView] = useState<'3D' | 'PREVIEW'>('3D');
 
   return (
     <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28">
@@ -95,42 +97,78 @@ export const HeroSection: React.FC = () => {
 
           </div>
 
-          {/* Right Column: Interactive Socratic Mock Preview Surface */}
+          {/* Right Column: 3D AI Core & Interactive Socratic Preview */}
           <div className="lg:col-span-5">
-            <div className="glass-panel rounded-3xl p-6 border border-slate-200/90 dark:border-gray-700/80 shadow-2xl space-y-4 relative">
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-gray-800 pb-3">
+            <div className="glass-panel rounded-3xl p-5 border border-slate-200/90 dark:border-gray-700/80 shadow-2xl relative">
+              {/* Header Switcher */}
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-gray-800 pb-3 mb-3">
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-rose-500" />
                   <div className="h-3 w-3 rounded-full bg-amber-500" />
                   <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-bold text-slate-800 dark:text-gray-200 ml-2">Live Writing Assistant</span>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                  Target Band 7.5
-                </span>
-              </div>
-
-              {/* Sample Essay Draft Snippet */}
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-800 space-y-2">
-                <div className="text-xs text-slate-500 dark:text-gray-400 font-bold uppercase tracking-wider">Student Active Draft</div>
-                <p className="text-xs text-slate-800 dark:text-gray-200 leading-relaxed font-sans">
-                  &quot;Furthermore, governments should play an important role in controlling carbon emissions from major factories...&quot;
-                </p>
-              </div>
-
-              {/* Live Socratic Guidance Card Preview */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50/90 to-brand-50/90 dark:from-brand-950/60 dark:to-indigo-950/60 border border-brand-300/80 dark:border-brand-500/40 space-y-2 shadow-lg animate-pulse-subtle">
-                <div className="flex items-center justify-between text-xs font-bold text-brand-700 dark:text-brand-300">
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
-                    Lexical Resource Elevation
+                  <span className="text-xs font-bold text-slate-800 dark:text-gray-200 ml-1.5">
+                    {heroView === '3D' ? 'Interactive 3D Socratic Core' : 'Live Writing Assistant Preview'}
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-gray-400">Paragraph 2</span>
                 </div>
-                <p className="text-xs text-slate-800 dark:text-brand-200 leading-relaxed">
-                  &quot;You used the basic phrase &apos;important role&apos;. To achieve Band 7.5 Lexical Resource, what precise academic collocation (e.g. &apos;pivotal responsibility&apos; or &apos;imperative intervention&apos;) could elevate this point?&quot;
-                </p>
+
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-gray-800 p-0.5 rounded-lg border border-slate-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setHeroView('3D')}
+                    className={`px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all ${
+                      heroView === '3D'
+                        ? 'bg-brand-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Box className="h-3 w-3" />
+                    <span>3D Core</span>
+                  </button>
+                  <button
+                    onClick={() => setHeroView('PREVIEW')}
+                    className={`px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all ${
+                      heroView === 'PREVIEW'
+                        ? 'bg-brand-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Eye className="h-3 w-3" />
+                    <span>Live UI</span>
+                  </button>
+                </div>
               </div>
+
+              {heroView === '3D' ? (
+                <div>
+                  <DynamicHeroScene />
+                  <div className="mt-2 text-center text-[11px] text-slate-500 dark:text-gray-400">
+                    Live WebGL 3D • Floating Band 9.0 Academic Nucleus & Orbital Rings
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Sample Essay Draft Snippet */}
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-800 space-y-2">
+                    <div className="text-xs text-slate-500 dark:text-gray-400 font-bold uppercase tracking-wider">Student Active Draft</div>
+                    <p className="text-xs text-slate-800 dark:text-gray-200 leading-relaxed font-sans">
+                      &quot;Furthermore, governments should play an important role in controlling carbon emissions from major factories...&quot;
+                    </p>
+                  </div>
+
+                  {/* Live Socratic Guidance Card Preview */}
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50/90 to-brand-50/90 dark:from-brand-950/60 dark:to-indigo-950/60 border border-brand-300/80 dark:border-brand-500/40 space-y-2 shadow-lg animate-pulse-subtle">
+                    <div className="flex items-center justify-between text-xs font-bold text-brand-700 dark:text-brand-300">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
+                        Lexical Resource Elevation
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-gray-400">Paragraph 2</span>
+                    </div>
+                    <p className="text-xs text-slate-800 dark:text-brand-200 leading-relaxed">
+                      &quot;You used the basic phrase &apos;important role&apos;. To achieve Band 7.5 Lexical Resource, what precise academic collocation (e.g. &apos;pivotal responsibility&apos; or &apos;imperative intervention&apos;) could elevate this point?&quot;
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
