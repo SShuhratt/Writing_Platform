@@ -1,6 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { Shield, ArrowLeft, Lock, Eye, FileText, CheckCircle2 } from 'lucide-react';
+import {
+  CANONICAL_SITE_URL,
+  PUBLIC_SUPPORT_EMAIL,
+  PUBLIC_SUPPORT_TELEGRAM,
+} from '@/lib/pricing-config';
 
 export const metadata = {
   title: 'Privacy Policy | IELTS Mentor AI',
@@ -50,8 +55,8 @@ export default function PrivacyPolicyPage() {
           </h2>
           <p className="text-slate-600 dark:text-gray-300">
             Welcome to <strong>IELTS Mentor AI</strong> (&ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;the Platform&rdquo;), located at{' '}
-            <a href="https://writing-platform-two.vercel.app" className="text-brand-600 dark:text-brand-400 underline">
-              https://writing-platform-two.vercel.app
+            <a href={CANONICAL_SITE_URL} className="text-brand-600 dark:text-brand-400 underline">
+              {CANONICAL_SITE_URL}
             </a>.
             We are dedicated to safeguarding your privacy and ensuring transparent handling of your personal information.
             This Privacy Policy explains what data we collect, why we collect it, how it is secured, and your rights as a user.
@@ -120,20 +125,23 @@ export default function PrivacyPolicyPage() {
             <li>Authenticating your user identity across devices.</li>
             <li>Tracking your writing progress and score trends over time.</li>
             <li>Triggering real-time Socratic mentor suggestions and examiner reports.</li>
+            <li>
+              <strong>Teacher &amp; Academy Cohort Visibility:</strong> If you join a school classroom using an instructor invite code and submit work under a cohort assignment, your essay text, word count, and assessment report for that assignment are shared with your cohort instructor for grading and feedback. Private practice essays outside cohort assignments remain private to your account.
+            </li>
             <li>Maintaining platform security, fraud prevention, and operational stability.</li>
           </ul>
         </div>
 
         {/* Data Retention & Deletion */}
         <div className="p-6 rounded-2xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 shadow-sm space-y-4 leading-relaxed text-sm">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">5. Data Retention, Security & Deletion Rights</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">5. Data Retention, Security &amp; Deletion Rights</h2>
           <p className="text-slate-600 dark:text-gray-300">
             All database communications are encrypted using TLS 1.3 in transit and stored in protected cloud databases with restricted access controls.
           </p>
           <p className="text-slate-600 dark:text-gray-300">
             You maintain full rights to access, update, or permanently delete your account and all associated essay history. To request complete data erasure, contact us at{' '}
-            <a href="mailto:support@ieltsmentor.ai" className="text-brand-600 dark:text-brand-400 underline font-semibold">
-              support@ieltsmentor.ai
+            <a href={`mailto:${PUBLIC_SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 underline font-semibold">
+              {PUBLIC_SUPPORT_EMAIL}
             </a>. All personal records will be permanently removed within 30 days of request receipt.
           </p>
         </div>
@@ -142,8 +150,11 @@ export default function PrivacyPolicyPage() {
         <div className="p-6 rounded-2xl bg-slate-100 dark:bg-gray-900/60 border border-slate-200 dark:border-gray-800 text-xs text-slate-600 dark:text-gray-400 space-y-2">
           <h3 className="font-bold text-slate-900 dark:text-white text-sm">6. Contact Information</h3>
           <p>If you have any questions or concerns regarding this policy, please reach out to our privacy team:</p>
-          <p className="font-mono">Email: support@ieltsmentor.ai</p>
-          <p>Application: IELTS Mentor AI Platform • Hosted on Vercel</p>
+          <p className="font-mono">Email: {PUBLIC_SUPPORT_EMAIL}</p>
+          {PUBLIC_SUPPORT_TELEGRAM && (
+            <p className="font-mono">Telegram Support: {PUBLIC_SUPPORT_TELEGRAM}</p>
+          )}
+          <p>Website: {CANONICAL_SITE_URL}</p>
         </div>
       </main>
     </div>

@@ -38,12 +38,29 @@ export const getSupabaseClient = (): SupabaseClient | null => {
 };
 
 /**
- * Server-side Admin Supabase instance (uses Service Role Key for migrations & seeding).
+ * Checks whether Supabase service-role credentials are configured for backend writes/reads.
+ */
+export const isServiceSupabaseConfigured = (): boolean => {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  return Boolean(
+    supabaseUrl &&
+    supabaseUrl.startsWith('https://') &&
+    serviceKey &&
+    serviceKey.length > 20
+  );
+};
+
+/**
+ * Server-side Admin Supabase instance (uses Service Role Key for privileged RLS-protected ops).
+ * Returns null if SUPABASE_SERVICE_ROLE_KEY is missing so callers never silently downgrade to anon.
  * NEVER expose this to the browser!
  */
 export const getServiceSupabase = (): SupabaseClient | null => {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   if (!supabaseUrl || !serviceKey) {
+    if (supabaseUrl && process.env.NODE_ENV === 'production') {
+      console.error('[Supabase] SUPABASE_SERVICE_ROLE_KEY is not configured; refusing anon fallback.');
+    }
     return null;
   }
 

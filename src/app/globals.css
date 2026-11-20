@@ -92,6 +92,14 @@ body {
   animation: glow-subtle 4s ease-in-out infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-subtle,
+  .animate-glow,
+  .animate-ping {
+    animation: none !important;
+  }
+}
+
 /* Print optimization styles */
 @media print {
   body {

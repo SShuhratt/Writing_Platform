@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": ".test-dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": [
+    "tests/**/*.ts",
+    "src/lib/**/*.ts",
+    "src/types/**/*.ts",
+    "src/app/api/evaluation/route.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}
+

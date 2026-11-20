@@ -1,5 +1,7 @@
 import { TargetBand, IELTSTaskPrompt, SocraticGuidanceCard, LevelOfferAlert, SubmissionReport } from '@/types/ielts';
 import { OFFICIAL_IELTS_RUBRICS, calculateOverallBandScore } from './ielts-rubric';
+import { generateFallbackSentenceAnnotations } from './sentence-annotations';
+import { AuthService } from './auth-service';
 
 /**
  * AI Service Engine supporting Google Gemini API & intelligent mock simulation engine.
@@ -9,6 +11,7 @@ export interface RealtimeGuidanceRequest {
   essayText: string;
   targetBand: TargetBand;
   prompt: IELTSTaskPrompt;
+  signal?: AbortSignal;
 }
 
 export interface RealtimeGuidanceResponse {
@@ -21,32 +24,55 @@ export interface EvaluationRequest {
   targetBand: TargetBand;
   prompt: IELTSTaskPrompt;
   mode: 'ACTIVE_ASSISTANT' | 'FOCUS_EXAM';
+  userId?: string;
+  candidateName?: string;
+  timeSpentSeconds?: number;
+  cohortId?: string;
+  assignmentId?: string;
+}
+
+function createServiceError(
+  message: string,
+  status: number,
+  extra: Record<string, unknown> = {}
+): Error & Record<string, unknown> {
+  const err = new Error(message) as Error & Record<string, unknown>;
+  err.status = status;
+  Object.assign(err, extra);
+  return err;
 }
 
 /**
  * Generate Realtime Socratic Guidance
  */
 export async function generateRealtimeGuidance(req: RealtimeGuidanceRequest): Promise<RealtimeGuidanceResponse> {
-  const { essayText, targetBand, prompt } = req;
+  const { essayText, targetBand, prompt, signal } = req;
 
-  try {
-    const response = await fetch('/api/guidance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ essayText, targetBand, prompt }),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data && data.cards) {
-        return data;
-      }
+  const sessionToken = AuthService.getSessionToken();
+  const response = await fetch('/api/guidance', {
+    method: 'POST',
+    signal,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+    },
+    body: JSON.stringify({ essayText, targetBand, prompt }),
+  });
+
+  if (response.ok) {
+    const data = await response.json();
+    if (data && Array.isArray(data.cards)) {
+      return data;
     }
-  } catch (err) {
-    console.warn('Server Gemini API call unavailable, using Socratic engine:', err);
+    throw createServiceError('Malformed response from Socratic coaching service.', 502);
   }
 
-  // Fallback to intelligent Socratic Guidance Generator
-  return generateMockSocraticGuidance(essayText, targetBand, prompt);
+  const errData = await response.json().catch(() => ({}));
+  throw createServiceError(
+    errData?.message || errData?.error || 'Socratic coach is temporarily unavailable.',
+    response.status,
+    { code: errData?.error }
+  );
 }
 
 /**
@@ -55,24 +81,45 @@ export async function generateRealtimeGuidance(req: RealtimeGuidanceRequest): Pr
 export async function generateSubmissionEvaluation(req: EvaluationRequest): Promise<SubmissionReport> {
   const { essayText, targetBand, prompt, mode } = req;
 
-  try {
-    const response = await fetch('/api/evaluation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ essayText, targetBand, prompt, mode }),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data && data.layer1ExaminerReport && data.layer2AlignmentReport) {
-        return data;
-      }
+  const sessionToken = AuthService.getSessionToken();
+  const response = await fetch('/api/evaluation', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+    },
+    body: JSON.stringify({
+      essayText,
+      targetBand,
+      prompt,
+      mode,
+      candidateName: req.candidateName,
+      timeSpentSeconds: req.timeSpentSeconds,
+      cohortId: req.cohortId,
+      assignmentId: req.assignmentId,
+    }),
+  });
+
+  if (response.ok) {
+    const data = await response.json();
+    if (data && data.layer1ExaminerReport && data.layer2AlignmentReport) {
+      return data;
     }
-  } catch (err) {
-    console.warn('Server Gemini API evaluation call unavailable, using examiner engine:', err);
+    throw createServiceError('Examiner returned an incomplete assessment payload. No credit was deducted.', 502);
   }
 
-  // Fallback to intelligent Examiner Assessment Engine
-  return generateMockSubmissionEvaluation(essayText, targetBand, prompt, mode);
+  const errData = await response.json().catch(() => ({}));
+  throw createServiceError(
+    errData?.message || errData?.error || 'Evaluation service is temporarily unavailable. No credit was deducted.',
+    response.status,
+    {
+      code: errData?.error,
+      resetsInHours: errData?.resetsInHours ?? 8,
+      resetsAt: errData?.resetsAt ?? null,
+      limit: errData?.limit,
+      planCode: errData?.planCode,
+    }
+  );
 }
 
 // --------------------------------------------------------------------------------
@@ -98,8 +145,16 @@ export function generateMockSocraticGuidance(essayText: string, targetBand: Targ
         category: 'TASK_RESPONSE',
         paragraphIndex: 1,
         highlightSnippet: paragraphs[0].substring(0, 50) + '...',
-        title: `Introduction Thesis & Position Check`,
-        socraticPrompt: `Paragraph 1 currently contains 1 sentence. To establish a strong Band ${targetBand} introduction, how can you follow your background sentence with an explicit thesis statement framing your outline?`,
+        title: prompt.type === 'TASK_1_ACADEMIC'
+          ? `Introduction & Paraphrase Check`
+          : prompt.type === 'TASK_1_GENERAL'
+          ? `Letter Purpose & Opening Check`
+          : `Introduction Thesis & Position Check`,
+        socraticPrompt: prompt.type === 'TASK_1_ACADEMIC'
+          ? `Paragraph 1 introduces the visual. For Band ${targetBand} Task Achievement, ensure you paraphrase the graphic description and clearly define the units/timeframe before moving to your key Overview.`
+          : prompt.type === 'TASK_1_GENERAL'
+          ? `Paragraph 1 begins your letter. For Band ${targetBand}, make sure your opening clearly and politely states the purpose of your letter before addressing the prompt bullet points.`
+          : `Paragraph 1 currently contains 1 sentence. To establish a strong Band ${targetBand} introduction, how can you follow your background sentence with an explicit thesis statement framing your outline?`,
         targetBandContext: targetBand,
         createdAt: Date.now()
       });
@@ -178,8 +233,12 @@ export function generateMockSocraticGuidance(essayText: string, targetBand: Targ
         category: 'TASK_RESPONSE',
         paragraphIndex: paragraphs.length,
         highlightSnippet: lastP.substring(0, 50) + '...',
-        title: `Conclusion Synthesis & Final Stand`,
-        socraticPrompt: `Your concluding paragraph synthesizes your essay. Ensure your final sentence explicitly reiterates your overarching stance without introducing new unargued points.`,
+        title: prompt.type === 'TASK_1_ACADEMIC'
+          ? `Task 1 Final Overview / Trend Check`
+          : `Conclusion Synthesis & Final Stand`,
+        socraticPrompt: prompt.type === 'TASK_1_ACADEMIC'
+          ? `In Task 1 Academic, examiners require factual summaries of trends rather than personal opinions or speculations. Ensure your summary does not hypothesize "why" trends occurred.`
+          : `Your concluding paragraph synthesizes your essay. Ensure your final sentence explicitly reiterates your overarching stance without introducing new unargued points.`,
         targetBandContext: targetBand,
         createdAt: Date.now()
       });
@@ -230,7 +289,8 @@ export function generateMockSubmissionEvaluation(
   essayText: string,
   targetBand: TargetBand,
   prompt: IELTSTaskPrompt,
-  mode: 'ACTIVE_ASSISTANT' | 'FOCUS_EXAM'
+  mode: 'ACTIVE_ASSISTANT' | 'FOCUS_EXAM',
+  candidateName?: string
 ): SubmissionReport {
   const words = essayText.trim().split(/\s+/).filter(Boolean).length;
   const targetNum = parseFloat(targetBand);
@@ -374,12 +434,26 @@ export function generateMockSubmissionEvaluation(
         ? `${paragraphs.length} paragraphs detected. IELTS essays require a 4-paragraph structure with clear line breaks between sections.`
         : 'Standard 4-paragraph structure detected with clear topical separation.'
     },
-    recommendedBlueprint: [
-      `Paragraph 1 (Introduction, ~35-45 words): Paraphrase "${prompt.title}" and clearly state your overarching thesis statement.`,
-      `Paragraph 2 (Body Paragraph 1, ~90 words): Present your primary argument using the PEEL method (Point, Explanation, Evidence, Link).`,
-      `Paragraph 3 (Body Paragraph 2, ~90 words): Address the counter-perspective or secondary argument with concrete real-world illustration.`,
-      `Paragraph 4 (Conclusion, ~30-40 words): Synthesize both perspectives and reiterate your stance without introducing new unargued points.`
-    ]
+    recommendedBlueprint: prompt.type === 'TASK_1_ACADEMIC'
+      ? [
+          `Paragraph 1 (Introduction, ~25-35 words): Paraphrase "${prompt.title}" and clearly state units and timeframe.`,
+          `Paragraph 2 (Overview, ~35-45 words): Summarize 2-3 key overarching trends, major peaks/troughs, or main stages WITHOUT specific figures.`,
+          `Paragraph 3 (Details 1, ~45-55 words): Report and compare the first major group of data points with accurate numbers.`,
+          `Paragraph 4 (Details 2, ~45-55 words): Contrast the remaining categories or anomalies with precise data. Do NOT add personal opinions or a conclusion!`
+        ]
+      : prompt.type === 'TASK_1_GENERAL'
+      ? [
+          `Salutation & Opening (~25-35 words): Appropriate greeting (e.g., Dear Sir/Madam) and clear statement of letter purpose.`,
+          `Paragraph 1 (~40-50 words): Fully address the first prompt bullet with relevant situational context.`,
+          `Paragraph 2 (~40-50 words): Fully address the second prompt bullet with specific details or explanations.`,
+          `Paragraph 3 & Sign-off (~35-45 words): Address the final prompt bullet and conclude with an appropriate sign-off (e.g. Yours sincerely).`
+        ]
+      : [
+          `Paragraph 1 (Introduction, ~35-45 words): Paraphrase "${prompt.title}" and clearly state your overarching thesis statement.`,
+          `Paragraph 2 (Body Paragraph 1, ~90 words): Present your primary argument using the PEEL method (Point, Explanation, Evidence, Link).`,
+          `Paragraph 3 (Body Paragraph 2, ~90 words): Address the counter-perspective or secondary argument with concrete real-world illustration.`,
+          `Paragraph 4 (Conclusion, ~30-40 words): Synthesize both perspectives and reiterate your stance without introducing new unargued points.`
+        ]
   };
 
   // 4. Dynamic Actionable Roadmap Tailored to Candidate Draft
@@ -430,9 +504,12 @@ export function generateMockSubmissionEvaluation(
     };
   });
 
+  const sentenceAnnotations = generateFallbackSentenceAnnotations(essayText, lexicalUpgrades);
+
   return {
-    id: `report-${Date.now()}`,
+    id: `report-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     timestamp: Date.now(),
+    ...(candidateName ? { candidateName } : {}),
     taskPrompt: prompt,
     essayText,
     wordCount: words,
@@ -497,7 +574,8 @@ export function generateMockSubmissionEvaluation(
         structuralDiagnosis,
         lexicalUpgrades,
         grammarBoosters
-      }
+      },
+      sentenceAnnotations
     }
   };
 }

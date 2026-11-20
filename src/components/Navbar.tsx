@@ -20,16 +20,22 @@ import {
   LayoutDashboard,
   PenTool,
   Sun,
-  Moon
+  Moon,
+  History,
+  GraduationCap,
 } from 'lucide-react';
 
 interface NavbarProps {
   onOpenPromptsModal?: () => void;
+  onOpenHistoryModal?: () => void;
+  onOpenClassroomsModal?: () => void;
   isWorkspace?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
   onOpenPromptsModal, 
+  onOpenHistoryModal,
+  onOpenClassroomsModal,
   isWorkspace = false 
 }) => {
   const { 
@@ -40,6 +46,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     currentPrompt,
     resetSession,
     currentUser,
+    activePlanCode,
+    setUpgradeModalOpen,
     logout,
     setAuthModalMode,
     theme,
@@ -60,6 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 src="/brand-logo.png"
                 alt="IELTS Mentor AI Logo"
                 fill
+                sizes="56px"
                 className="object-cover"
                 priority
               />
@@ -179,6 +188,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Practice Workspace</span>
               </button>
             )}
+            <Link href="/#pricing" className="flex items-center gap-1.5 text-slate-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors">
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              <span>Pricing</span>
+            </Link>
+            <Link href="/teacher" className="flex items-center gap-1.5 text-slate-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors">
+              <GraduationCap className="h-4 w-4 text-indigo-500" />
+              <span>{currentUser?.role === 'teacher' || currentUser?.role === 'admin' ? 'Teacher Portal' : 'For Schools'}</span>
+            </Link>
             {currentUser?.role === 'admin' && (
               <Link href="/admin" className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 hover:text-amber-500 transition-colors">
                 <LayoutDashboard className="h-4 w-4 text-amber-500" />
@@ -190,6 +207,28 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right: Reset Session, Theme Toggle & Authentication User Menu */}
         <div className="flex items-center gap-2">
+
+          {isWorkspace && onOpenClassroomsModal && (
+            <button
+              onClick={onOpenClassroomsModal}
+              className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/60 transition-all flex items-center gap-1.5 text-xs font-semibold"
+              title="Join a School Cohort & View Teacher Assignments"
+            >
+              <GraduationCap className="h-3.5 w-3.5 text-indigo-500" />
+              <span className="hidden sm:inline">Classes</span>
+            </button>
+          )}
+
+          {isWorkspace && onOpenHistoryModal && (
+            <button
+              onClick={onOpenHistoryModal}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-gray-800/80 dark:hover:bg-gray-700/80 text-slate-700 dark:text-gray-300 border border-slate-200 dark:border-gray-700/60 transition-all flex items-center gap-1.5 text-xs font-semibold"
+              title="View Submission History & Band Progression"
+            >
+              <History className="h-3.5 w-3.5 text-brand-500" />
+              <span className="hidden sm:inline">History</span>
+            </button>
+          )}
 
           {isWorkspace && (
             <button
@@ -218,16 +257,39 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* User Auth Profile / Login */}
           {currentUser ? (
             <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-gray-800">
+              {isWorkspace && currentUser.role === 'user' && (
+                <button
+                  type="button"
+                  onClick={() => setUpgradeModalOpen(true)}
+                  className={`hidden md:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all ${
+                    activePlanCode !== 'FREE'
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
+                  }`}
+                  title="Manage IELTS Pro plan or redeem voucher code"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  <span>{activePlanCode !== 'FREE' ? 'PRO' : 'Upgrade'}</span>
+                </button>
+              )}
+
               <div className="flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-gray-800 text-xs text-slate-800 dark:text-gray-200">
                 {currentUser.role === 'admin' ? (
                   <ShieldCheck className="h-4 w-4 text-indigo-500" />
+                ) : currentUser.role === 'teacher' ? (
+                  <GraduationCap className="h-4 w-4 text-indigo-500" />
                 ) : (
                   <UserCheck className="h-4 w-4 text-emerald-500" />
                 )}
                 <span className="font-bold text-slate-900 dark:text-white max-w-[100px] truncate">{currentUser.username}</span>
                 {currentUser.role === 'admin' && (
-                  <Link href="/admin" className="text-[9px] px-1.5 py-0.2 rounded font-extrabold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors">
+                  <Link href="/admin" className="text-[9px] px-1.5 py-0.5 rounded font-extrabold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors">
                     ADMIN
+                  </Link>
+                )}
+                {currentUser.role === 'teacher' && (
+                  <Link href="/teacher" className="text-[9px] px-1.5 py-0.5 rounded font-extrabold bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 transition-colors">
+                    TEACHER
                   </Link>
                 )}
               </div>

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { CANONICAL_SITE_URL } from "@/lib/pricing-config";
+import { MotionProvider } from "@/components/MotionProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(CANONICAL_SITE_URL),
   title: "IELTS Writing Assistant Platform | Adaptive Real-Time AI Mentor",
   description: "Adaptive real-time writing environment for IELTS Task 1 and Task 2. Socratic mentorship grounded strictly in target band scores (5.0–9.0).",
   icons: {
@@ -38,7 +41,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased min-h-screen bg-background text-foreground flex flex-col">
-        {children}
+        <MotionProvider>{children}</MotionProvider>
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </body>
     </html>

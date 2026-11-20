@@ -61,6 +61,20 @@ export interface ObjectiveExaminerReport {
 
 export type TargetAlignmentStatus = 'TARGET_ACHIEVED' | 'TARGET_NOT_MET' | 'EXCEEDED_TARGET';
 
+export type SentenceAnnotationType = 'ERROR' | 'COLLOCATION' | 'COHERENCE' | 'STRENGTH';
+
+export type SentenceAnnotationCriterion = 'TR' | 'CC' | 'LR' | 'GRA';
+
+export interface SentenceAnnotation {
+  id: string;
+  exactQuote: string;
+  type: SentenceAnnotationType;
+  criterion: SentenceAnnotationCriterion;
+  issueLabel: string;
+  explanation: string;
+  suggestion?: string;
+}
+
 export interface ParagraphAlignmentAudit {
   paragraphNumber: number;
   textSnippet: string;
@@ -111,11 +125,13 @@ export interface TargetAlignmentReport {
   gapAnalysis: string;
   actionableRoadmap: string[];
   specificRecommendations?: SpecificRecommendations;
+  sentenceAnnotations?: SentenceAnnotation[];
 }
 
 export interface SubmissionReport {
   id: string;
   timestamp: number;
+  candidateName?: string;
   taskPrompt: IELTSTaskPrompt;
   essayText: string;
   wordCount: number;

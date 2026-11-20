@@ -1,14 +1,26 @@
 import { NextResponse } from 'next/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimitAsync, rateLimitResponse } from '@/lib/rate-limit';
+import { signAdminToken, signSessionToken } from '@/lib/server-auth';
+import { loginStudentAccount } from '@/lib/account-repository';
 import { User } from '@/types/auth';
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'shuhrat3';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@ieltsmentor.ai';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '$Huhrat333';
+const ADMIN_USERNAME = (process.env.ADMIN_USERNAME || '').trim();
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+
+function setSessionCookie(response: NextResponse, cookieName: string, token: string) {
+  response.cookies.set(cookieName, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 24 * 60 * 60,
+  });
+}
 
 export async function POST(req: Request) {
-  // 1. Rate Limiting Protection (5 login attempts / min per IP to prevent brute-force attacks)
-  const rateLimitResult = checkRateLimit(req, {
+  // 1. Rate Limiting Protection (5 login attempts / min to prevent brute-force attacks)
+  const rateLimitResult = await checkRateLimitAsync(req, {
     limit: 5,
     windowMs: 60 * 1000,
     prefix: 'auth_login',
@@ -31,26 +43,43 @@ export async function POST(req: Request) {
     const cleanId = String(identifier).trim().toLowerCase();
     const cleanPass = String(password);
 
+    const isAdminConfigured = Boolean((ADMIN_USERNAME || ADMIN_EMAIL) && ADMIN_PASSWORD);
     const isAdminId =
-      cleanId === ADMIN_USERNAME.toLowerCase() || cleanId === ADMIN_EMAIL.toLowerCase();
+      isAdminConfigured &&
+      ((ADMIN_USERNAME && cleanId === ADMIN_USERNAME.toLowerCase()) ||
+        (ADMIN_EMAIL && cleanId === ADMIN_EMAIL.toLowerCase()));
 
-    // 2. Admin Verification (Server-Side Only - Secret never exposed to browser)
+    // 2. Admin Verification (Server-Side Env Only)
     if (isAdminId) {
       if (cleanPass === ADMIN_PASSWORD) {
         const adminUser: User = {
-          id: 'admin-shuhrat3',
-          username: ADMIN_USERNAME,
-          email: ADMIN_EMAIL,
-          fullName: 'Shuhrat (Platform Admin)',
+          id: 'admin-root',
+          username: ADMIN_USERNAME || 'admin',
+          email: ADMIN_EMAIL || 'admin@ieltsmentor.ai',
+          fullName: 'Platform Administrator',
           role: 'admin',
           targetBand: '9.0',
+          authProvider: 'local',
           createdAt: Date.now(),
         };
 
-        return NextResponse.json({
+        const adminToken = signAdminToken({
+          userId: adminUser.id,
+          username: adminUser.username,
+          fullName: adminUser.fullName,
+          authProvider: 'local',
+          role: 'admin',
+        });
+
+        const response = NextResponse.json({
           success: true,
           user: adminUser,
+          token: adminToken,
         });
+
+        setSessionCookie(response, 'ielts_admin_token', adminToken);
+        setSessionCookie(response, 'ielts_session_token', adminToken);
+        return response;
       }
 
       return NextResponse.json(
@@ -59,32 +88,40 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Standard User Login Verification
-    if (cleanPass.length >= 4) {
-      const isEmail = cleanId.includes('@');
-      const standardUser: User = {
-        id: `user-${Date.now()}`,
-        username: cleanId.split('@')[0] || 'student',
-        email: isEmail ? cleanId : `${cleanId}@example.com`,
-        fullName: cleanId.split('@')[0].toUpperCase(),
-        role: 'user',
-        targetBand: '7.0',
-        createdAt: Date.now(),
-      };
+    // 3. Server-Backed Student Verification (scrypt password verification)
+    const studentResult = await loginStudentAccount({
+      identifier: cleanId,
+      password: cleanPass,
+    });
 
-      return NextResponse.json({
-        success: true,
-        user: standardUser,
-      });
+    if (!studentResult.success || !studentResult.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: studentResult.error || 'Invalid credentials. Please verify your details.',
+        },
+        { status: 401 }
+      );
     }
 
-    return NextResponse.json(
-      { success: false, error: 'Invalid credentials. Please verify your details.' },
-      { status: 401 }
-    );
+    const sessionToken = signSessionToken({
+      userId: studentResult.user.id,
+      username: studentResult.user.username,
+      fullName: studentResult.user.fullName,
+      authProvider: studentResult.user.authProvider || 'local',
+      role: 'user',
+    });
+
+    const response = NextResponse.json({
+      success: true,
+      user: studentResult.user,
+      token: sessionToken,
+    });
+    setSessionCookie(response, 'ielts_session_token', sessionToken);
+    return response;
   } catch (err: any) {
     return NextResponse.json(
-      { success: false, error: 'Authentication service encountered an error' },
+      { success: false, error: err?.message || 'Authentication error' },
       { status: 500 }
     );
   }

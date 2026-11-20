@@ -3,11 +3,12 @@ import { getTursoClient, isTursoConfigured } from '@/lib/turso';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 import { OFFICIAL_PROMPTS_DATABASE } from '@/lib/prompts-database';
 import { IELTSTaskPrompt } from '@/types/ielts';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimitAsync, rateLimitResponse } from '@/lib/rate-limit';
+import { verifyAdminToken } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   // 1. Rate Limiting Protection (60 requests / min per IP)
-  const rateLimitResult = checkRateLimit(request, {
+  const rateLimitResult = await checkRateLimitAsync(request, {
     limit: 60,
     windowMs: 60 * 1000,
     prefix: 'prompts_get',
@@ -193,7 +194,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // 1. Rate Limiting Protection (10 requests / min per IP to prevent spamming DB)
-  const rateLimitResult = checkRateLimit(request, {
+  const rateLimitResult = await checkRateLimitAsync(request, {
     limit: 10,
     windowMs: 60 * 1000,
     prefix: 'prompts_post',
@@ -239,40 +240,59 @@ export async function POST(request: NextRequest) {
       recommendedTimeMinutes: sanitizedTime,
     };
 
-    if (isTursoConfigured()) {
-      const turso = getTursoClient();
-      if (turso) {
-        await turso.execute({
-          sql: `INSERT INTO prompts (id, title, type, category, question_text, min_word_count, recommended_time_minutes) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          args: [
-            newPrompt.id,
-            newPrompt.title,
-            newPrompt.type,
-            newPrompt.category,
-            newPrompt.questionText,
-            newPrompt.minWordCount,
-            newPrompt.recommendedTimeMinutes,
-          ],
-        });
+    // Check for Admin Authorization before modifying shared production prompt database
+    const authHeader = request.headers.get('authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+    const cookieToken = request.cookies.get('ielts_admin_token')?.value;
+    const admin = verifyAdminToken(bearerToken || cookieToken);
+
+    // Only verified Administrators are allowed to persist new prompts into the global database
+    if (admin) {
+      if (isTursoConfigured()) {
+        const turso = getTursoClient();
+        if (turso) {
+          await turso.execute({
+            sql: `INSERT INTO prompts (id, title, type, category, question_text, min_word_count, recommended_time_minutes) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            args: [
+              newPrompt.id,
+              newPrompt.title,
+              newPrompt.type,
+              newPrompt.category,
+              newPrompt.questionText,
+              newPrompt.minWordCount,
+              newPrompt.recommendedTimeMinutes,
+            ],
+          });
+        }
+      } else if (isSupabaseConfigured()) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          await supabase.from('prompts').insert({
+            id: newPrompt.id,
+            title: newPrompt.title,
+            type: newPrompt.type,
+            category: newPrompt.category,
+            question_text: newPrompt.questionText,
+            min_word_count: newPrompt.minWordCount,
+            recommended_time_minutes: newPrompt.recommendedTimeMinutes,
+          });
+        }
       }
-    } else if (isSupabaseConfigured()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        await supabase.from('prompts').insert({
-          id: newPrompt.id,
-          title: newPrompt.title,
-          type: newPrompt.type,
-          category: newPrompt.category,
-          question_text: newPrompt.questionText,
-          min_word_count: newPrompt.minWordCount,
-          recommended_time_minutes: newPrompt.recommendedTimeMinutes,
-        });
-      }
+
+      return NextResponse.json({
+        success: true,
+        prompt: newPrompt,
+        persisted: true,
+        message: 'Prompt saved to global database successfully',
+      });
     }
 
+    // Unauthenticated or student requests return the sanitized prompt for local workspace practice without polluting global DB
     return NextResponse.json({
       success: true,
       prompt: newPrompt,
+      persisted: false,
+      message: 'Custom prompt created for local practice session (admin authentication required for global publication)',
     });
   } catch (error: any) {
     return NextResponse.json(

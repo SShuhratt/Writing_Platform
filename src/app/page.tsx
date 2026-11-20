@@ -7,6 +7,7 @@ import { Navbar } from '@/components/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { BandShowcase } from '@/components/landing/BandShowcase';
 import { WorkflowPillars } from '@/components/landing/WorkflowPillars';
+import { PricingSection } from '@/components/landing/PricingSection';
 import { Footer } from '@/components/landing/Footer';
 import { AuthModals } from '@/components/auth/AuthModals';
 
@@ -28,6 +29,7 @@ export default function LandingPage() {
         <HeroSection />
         <BandShowcase />
         <WorkflowPillars />
+        <PricingSection />
       </main>
 
       <Footer />

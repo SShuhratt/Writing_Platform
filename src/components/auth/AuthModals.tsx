@@ -24,6 +24,11 @@ declare global {
   }
 }
 
+// Guard module-level GSI initialization so switching Sign In <-> Register or reopening
+// the modal never re-runs google.accounts.id.initialize() multiple times.
+let initializedGoogleClientId: string | null = null;
+let activeGoogleCredentialHandler: ((response: any) => void | Promise<void>) | null = null;
+
 export const AuthModals: React.FC = () => {
   const { authModalMode, setAuthModalMode, setCurrentUser } = useWritingStore();
 
@@ -37,72 +42,96 @@ export const AuthModals: React.FC = () => {
   const [registerTargetBand, setRegisterTargetBand] = useState<TargetBand>('7.0');
 
   const [resetEmail, setResetEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [resetStep, setResetStep] = useState<'REQUEST' | 'CONFIRM'>('REQUEST');
+  const [isAuthBusy, setIsAuthBusy] = useState(false);
   const [resetMsg, setResetMsg] = useState('');
 
   const [error, setError] = useState('');
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '1064108249362-jafv9f37fdqtg81kh7vjf46ppvbmdido.apps.googleusercontent.com';
+  const googleClientId = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
 
-  // Initialize Google Identity Services button
+  // Check if URL placed a password reset token in sessionStorage
+  useEffect(() => {
+    if (authModalMode === 'RESET_PASSWORD' && typeof window !== 'undefined') {
+      try {
+        const pendingToken = window.sessionStorage.getItem('ielts_pending_reset_token');
+        if (pendingToken) {
+          setResetToken(pendingToken);
+          setResetStep('CONFIRM');
+          window.sessionStorage.removeItem('ielts_pending_reset_token');
+        }
+      } catch {
+        // Ignore storage errors
+      }
+    }
+  }, [authModalMode]);
+
+  // Initialize Google Identity Services button once and re-render button when modal opens
   useEffect(() => {
     if (!authModalMode || (authModalMode !== 'LOGIN' && authModalMode !== 'REGISTER')) return;
 
-    const initGoogle = () => {
-      if (typeof window !== 'undefined' && window.google?.accounts?.id && googleClientId) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: googleClientId,
-            callback: (response: any) => {
-              if (!response?.credential) return;
-              try {
-                // Decode base64 JWT payload
-                const base64Url = response.credential.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(
-                  atob(base64)
-                    .split('')
-                    .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                    .join('')
-                );
-                const data = JSON.parse(jsonPayload);
-                const res = AuthService.loginWithGoogle({
-                  email: data.email,
-                  name: data.name,
-                  sub: data.sub,
-                });
-                if (res.success && res.user) {
-                  setCurrentUser(res.user);
-                  handleClose();
-                }
-              } catch (parseErr) {
-                console.error('Failed to parse Google credential token:', parseErr);
-                setError('Google authentication succeeded, but profile parsing failed.');
-              }
-            },
-          });
-
-          if (googleBtnRef.current) {
-            googleBtnRef.current.innerHTML = '';
-            window.google.accounts.id.renderButton(googleBtnRef.current, {
-              theme: 'outline',
-              size: 'large',
-              width: 320,
-              text: authModalMode === 'REGISTER' ? 'signup_with' : 'signin_with',
-              shape: 'pill',
-            });
-          }
-        } catch (e) {
-          console.warn('Could not initialize Google Identity Services:', e);
+    activeGoogleCredentialHandler = async (response: any) => {
+      if (!response?.credential) return;
+      try {
+        const res = await AuthService.loginWithGoogle(response.credential);
+        if (res.success && res.user) {
+          setCurrentUser(res.user);
+          setError('');
+          setResetMsg('');
+          setAuthModalMode(null);
+        } else {
+          setError(res.error || 'Google authentication failed.');
         }
+      } catch (parseErr) {
+        console.error('Failed to complete Google Sign-In:', parseErr);
+        setError('Google authentication succeeded, but server verification failed.');
       }
     };
 
-    // Attempt immediately and with retry if script is still loading
-    initGoogle();
-    const timer = setTimeout(initGoogle, 600);
-    return () => clearTimeout(timer);
-  }, [authModalMode, googleClientId]);
+    const renderGoogleButton = (): boolean => {
+      if (typeof window === 'undefined' || !window.google?.accounts?.id || !googleClientId) {
+        return false;
+      }
+      try {
+        if (initializedGoogleClientId !== googleClientId) {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: (response: any) => {
+              if (activeGoogleCredentialHandler) {
+                void activeGoogleCredentialHandler(response);
+              }
+            },
+          });
+          initializedGoogleClientId = googleClientId;
+        }
+
+        if (googleBtnRef.current) {
+          googleBtnRef.current.innerHTML = '';
+          window.google.accounts.id.renderButton(googleBtnRef.current, {
+            theme: 'outline',
+            size: 'large',
+            width: 320,
+            text: authModalMode === 'REGISTER' ? 'signup_with' : 'signin_with',
+            shape: 'pill',
+          });
+        }
+        return true;
+      } catch (e) {
+        console.warn('Could not initialize Google Identity Services:', e);
+        return false;
+      }
+    };
+
+    if (renderGoogleButton()) return;
+
+    const timer = window.setTimeout(() => {
+      renderGoogleButton();
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [authModalMode, googleClientId, setAuthModalMode, setCurrentUser]);
 
   if (!authModalMode) return null;
 
@@ -124,10 +153,10 @@ export const AuthModals: React.FC = () => {
     }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const res = AuthService.register(registerName, registerEmail, registerPass, registerTargetBand);
+    const res = await AuthService.register(registerName, registerEmail, registerPass, registerTargetBand);
     if (res.success && res.user) {
       setCurrentUser(res.user);
       handleClose();
@@ -136,14 +165,42 @@ export const AuthModals: React.FC = () => {
     }
   };
 
-  const handleResetSubmit = (e: React.FormEvent) => {
+  const handleResetRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetEmail) {
+    setError('');
+    if (!resetEmail.trim()) {
       setError('Please enter your email address');
       return;
     }
-    const res = AuthService.resetPassword(resetEmail);
-    setResetMsg(res.message);
+    setIsAuthBusy(true);
+    const res = await AuthService.requestPasswordReset(resetEmail.trim());
+    setIsAuthBusy(false);
+    if (res.success) {
+      setResetMsg(res.message);
+      setResetStep('CONFIRM');
+    } else {
+      setError(res.error || 'Could not request password reset.');
+    }
+  };
+
+  const handleResetConfirmSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!resetToken.trim() || newPassword.length < 6) {
+      setError('Enter the reset token and a new password (at least 6 characters).');
+      return;
+    }
+    setIsAuthBusy(true);
+    const res = await AuthService.confirmPasswordReset(resetToken.trim(), newPassword);
+    setIsAuthBusy(false);
+    if (res.success) {
+      setResetMsg(res.message || 'Password updated. You can now sign in.');
+      setResetToken('');
+      setNewPassword('');
+      setResetStep('REQUEST');
+    } else {
+      setError(res.error || 'Password reset failed.');
+    }
   };
 
   return (
@@ -164,6 +221,7 @@ export const AuthModals: React.FC = () => {
               src="/brand-logo.png"
               alt="IELTS Mentor AI Logo"
               fill
+              sizes="44px"
               className="object-cover"
             />
           </div>
@@ -203,8 +261,8 @@ export const AuthModals: React.FC = () => {
           </div>
         )}
 
-        {/* Google Authentication Section */}
-        {(authModalMode === 'LOGIN' || authModalMode === 'REGISTER') && (
+        {/* Google Authentication Section (only shown when NEXT_PUBLIC_GOOGLE_CLIENT_ID is configured) */}
+        {(authModalMode === 'LOGIN' || authModalMode === 'REGISTER') && googleClientId && (
           <div className="mb-4">
             <div className="flex justify-center min-h-[44px] items-center">
               <div ref={googleBtnRef} className="w-full flex justify-center" />
@@ -230,6 +288,8 @@ export const AuthModals: React.FC = () => {
               <label className="block text-xs font-semibold text-slate-700 dark:text-gray-300 mb-1">Email or Username</label>
               <input
                 type="text"
+                name="username"
+                autoComplete="username"
                 required
                 value={loginIdentifier}
                 onChange={(e) => setLoginIdentifier(e.target.value)}
@@ -251,6 +311,8 @@ export const AuthModals: React.FC = () => {
               </div>
               <input
                 type="password"
+                name="password"
+                autoComplete="current-password"
                 required
                 value={loginPass}
                 onChange={(e) => setLoginPass(e.target.value)}
@@ -276,6 +338,8 @@ export const AuthModals: React.FC = () => {
               <label className="block text-xs font-semibold text-slate-700 dark:text-gray-300 mb-1">Full Name</label>
               <input
                 type="text"
+                name="name"
+                autoComplete="name"
                 required
                 value={registerName}
                 onChange={(e) => setRegisterName(e.target.value)}
@@ -288,6 +352,8 @@ export const AuthModals: React.FC = () => {
               <label className="block text-xs font-semibold text-slate-700 dark:text-gray-300 mb-1">Email Address</label>
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
                 required
                 value={registerEmail}
                 onChange={(e) => setRegisterEmail(e.target.value)}
@@ -300,6 +366,8 @@ export const AuthModals: React.FC = () => {
               <label className="block text-xs font-semibold text-slate-700 dark:text-gray-300 mb-1">Password</label>
               <input
                 type="password"
+                name="new-password"
+                autoComplete="new-password"
                 required
                 value={registerPass}
                 onChange={(e) => setRegisterPass(e.target.value)}
@@ -347,30 +415,40 @@ export const AuthModals: React.FC = () => {
               </div>
               <div>
                 <h4 className="font-bold text-slate-900 dark:text-white text-sm">Reset Your Password</h4>
-                <p className="text-xs text-slate-600 dark:text-gray-400">Enter your email to receive recovery instructions</p>
+                <p className="text-xs text-slate-600 dark:text-gray-400">
+                  {resetStep === 'REQUEST'
+                    ? 'Enter your account email to receive a recovery link'
+                    : 'Paste your recovery token and choose a new password'}
+                </p>
               </div>
             </div>
 
-            {resetMsg ? (
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-xs text-emerald-800 dark:text-emerald-300 space-y-2">
+            {resetMsg && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-xs text-emerald-800 dark:text-emerald-300 space-y-2">
                 <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Recovery Email Sent!</span>
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <span>{resetMsg}</span>
                 </div>
-                <p>{resetMsg}</p>
-                <button
-                  onClick={() => { setAuthModalMode('LOGIN'); setResetMsg(''); }}
-                  className="mt-2 w-full py-2 rounded-lg bg-emerald-600 text-white font-bold text-xs"
-                >
-                  Return to Sign In
-                </button>
+                {resetStep === 'REQUEST' && (
+                  <button
+                    type="button"
+                    onClick={() => { setAuthModalMode('LOGIN'); setResetMsg(''); }}
+                    className="w-full py-2 rounded-lg bg-emerald-600 text-white font-bold text-xs"
+                  >
+                    Return to Sign In
+                  </button>
+                )}
               </div>
-            ) : (
-              <form onSubmit={handleResetSubmit} className="space-y-4">
+            )}
+
+            {resetStep === 'REQUEST' ? (
+              <form onSubmit={handleResetRequestSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-gray-300 mb-1">Email Address</label>
                   <input
                     type="email"
+                    name="email"
+                    autoComplete="email"
                     required
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
@@ -381,9 +459,65 @@ export const AuthModals: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-lg shadow-brand-500/25 transition-all"
+                  disabled={isAuthBusy}
+                  className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-lg shadow-brand-500/25 transition-all disabled:opacity-60"
                 >
-                  Send Recovery Link
+                  {isAuthBusy ? 'Sending...' : 'Send Recovery Link'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setError(''); setResetMsg(''); setResetStep('CONFIRM'); }}
+                  className="w-full text-center text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium"
+                >
+                  Already have a recovery token? Enter it here
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleResetConfirmSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-gray-300 mb-1">Reset Token</label>
+                  <input
+                    type="text"
+                    name="reset-token"
+                    autoComplete="one-time-code"
+                    required
+                    value={resetToken}
+                    onChange={(e) => setResetToken(e.target.value)}
+                    placeholder="Paste token from recovery email"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-700 text-slate-900 dark:text-white text-sm font-mono focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-gray-300 mb-1">New Password</label>
+                  <input
+                    type="password"
+                    name="new-password"
+                    autoComplete="new-password"
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isAuthBusy}
+                  className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-lg shadow-brand-500/25 transition-all disabled:opacity-60"
+                >
+                  {isAuthBusy ? 'Updating Password...' : 'Update Password'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setError(''); setResetStep('REQUEST'); }}
+                  className="w-full text-center text-xs text-slate-500 dark:text-gray-400 hover:underline font-medium"
+                >
+                  Back to request new email link
                 </button>
               </form>
             )}

@@ -14,15 +14,23 @@ import {
   Loader2,
   Shield,
   ShieldAlert,
-  BookOpen
+  BookOpen,
+  Zap
 } from 'lucide-react';
 
 interface EditorSurfaceProps {
   onSubmitTask: () => void;
   onOpenPromptsModal?: () => void;
+  isModalOpen?: boolean;
 }
 
-export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOpenPromptsModal }) => {
+const SOCRATIC_COOLDOWN_MS = 12_000;
+
+export const EditorSurface: React.FC<EditorSurfaceProps> = ({
+  onSubmitTask,
+  onOpenPromptsModal,
+  isModalOpen = false,
+}) => {
   const {
     essayText,
     updateEssayText,
@@ -41,11 +49,22 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
     setGuidanceCards,
     levelOffer,
     setLevelOffer,
-    isSubmitting
+    isSubmitting,
+    currentUser,
+    activePlanCode,
+    dailyEvaluationLimit,
+    setUpgradeModalOpen,
+    getRemainingDailyEvaluations
   } = useWritingStore();
 
   const [pasteBlockedWarning, setPasteBlockedWarning] = useState<string | null>(null);
+  const [guidanceNotice, setGuidanceNotice] = useState<string | null>(null);
+  const [showShortEssayConfirm, setShowShortEssayConfirm] = useState(false);
+  const [isPageHidden, setIsPageHidden] = useState(false);
   const pasteWarningTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const internalClipboardRef = useRef<string | null>(null);
+  const guidanceAbortRef = useRef<AbortController | null>(null);
+  const lastGuidanceTriggerAtRef = useRef<number>(0);
 
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const prevParagraphCountRef = useRef<number>(0);
@@ -53,8 +72,9 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
   const lastEvaluated30WordBucketRef = useRef<number>(0);
   const lastEvaluatedTopicSentenceParaIndexRef = useRef<number>(0);
   const checkedConclusionRef = useRef<boolean>(false);
+  const lastEvaluatedWordCountRef = useRef<number>(0);
 
-  // Reset Milestone Tracking Refs on Essay Reset
+  // Reset Milestone Tracking Refs on Essay Reset or Prompt Switch
   useEffect(() => {
     if (essayText.length === 0) {
       prevParagraphCountRef.current = 0;
@@ -62,13 +82,34 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
       lastEvaluated30WordBucketRef.current = 0;
       lastEvaluatedTopicSentenceParaIndexRef.current = 0;
       checkedConclusionRef.current = false;
+      lastEvaluatedWordCountRef.current = 0;
+      setGuidanceNotice(null);
+      setShowShortEssayConfirm(false);
     }
-  }, [essayText]);
+  }, [essayText, currentPrompt.id]);
 
-  // Timer Tick Hook
+  // Track tab visibility so timer pauses automatically when backgrounded
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const handleVisibility = () => setIsPageHidden(document.hidden);
+    handleVisibility();
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  // Abort in-flight guidance & cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      guidanceAbortRef.current?.abort();
+      if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+      if (pasteWarningTimerRef.current) clearTimeout(pasteWarningTimerRef.current);
+    };
+  }, []);
+
+  // Timer Tick Hook (pauses when tab hidden, modal open, or submission in flight)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (isTimerRunning) {
+    if (isTimerRunning && !isModalOpen && !isPageHidden && !isSubmitting) {
       interval = setInterval(() => {
         incrementTimer();
       }, 1000);
@@ -76,7 +117,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isTimerRunning, incrementTimer]);
+  }, [isTimerRunning, isModalOpen, isPageHidden, isSubmitting, incrementTimer]);
 
   // Format Elapsed Time (MM:SS)
   const formatTime = (secs: number) => {
@@ -86,18 +127,33 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
   };
 
   // Trigger Asynchronous Realtime Analysis (Workflow 3.1 & 3.4)
-  const triggerAnalysis = async (currentText: string, triggerReason?: string) => {
-    if (assistanceMode === 'FOCUS_EXAM' || isAnalyzing) return; // Muted in Focus Exam Mode or if actively analyzing
+  const triggerAnalysis = async (currentText: string, _triggerReason?: string, bypassCooldown = false) => {
+    if (assistanceMode === 'FOCUS_EXAM') return;
     const currentWords = currentText.trim().split(/\s+/).filter(Boolean).length;
-    if (currentWords < 10) return; // Baseline minimum
+    if (currentWords < 15) return; // Baseline minimum words for meaningful feedback
 
+    const now = Date.now();
+    if (!bypassCooldown && now - lastGuidanceTriggerAtRef.current < SOCRATIC_COOLDOWN_MS) {
+      return;
+    }
+
+    guidanceAbortRef.current?.abort();
+    const controller = new AbortController();
+    guidanceAbortRef.current = controller;
+    lastGuidanceTriggerAtRef.current = now;
+    lastEvaluatedWordCountRef.current = currentWords;
     setIsAnalyzing(true);
+    setGuidanceNotice(null);
+
     try {
       const res = await generateRealtimeGuidance({
         essayText: currentText,
         targetBand,
         prompt: currentPrompt,
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       if (res.cards) {
         setGuidanceCards(res.cards);
@@ -105,10 +161,21 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
       if (res.levelOffer !== undefined) {
         setLevelOffer(res.levelOffer);
       }
-    } catch (err) {
-      console.error('Realtime analysis error:', err);
+    } catch (err: any) {
+      if (err?.name === 'AbortError' || controller.signal.aborted) {
+        return;
+      }
+      if (err?.status === 429) {
+        setGuidanceNotice('Daily Socratic coaching limit reached. You can continue drafting or submit for grading.');
+      } else if (err?.status === 401) {
+        setGuidanceNotice('Sign in to activate live AI Socratic coaching.');
+      } else {
+        setGuidanceNotice('Live Socratic coach is temporarily unavailable. Keep writing safely—auto-save is active.');
+      }
     } finally {
-      setIsAnalyzing(false);
+      if (guidanceAbortRef.current === controller) {
+        setIsAnalyzing(false);
+      }
     }
   };
 
@@ -139,7 +206,32 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
     }, 4500);
   };
 
+  const captureInternalSelection = (textarea: HTMLTextAreaElement) => {
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    if (end > start) {
+      internalClipboardRef.current = textarea.value.slice(start, end);
+    }
+  };
+
+  const handleCopy = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    captureInternalSelection(e.currentTarget);
+  };
+
+  const handleCut = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    captureInternalSelection(e.currentTarget);
+  };
+
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = e.clipboardData.getData('text/plain');
+    if (
+      pastedText.length > 0 &&
+      internalClipboardRef.current !== null &&
+      pastedText === internalClipboardRef.current
+    ) {
+      // Allow rearranging sentences cut/copied from inside this editor
+      return;
+    }
     e.preventDefault();
     triggerPasteBlockedWarning();
   };
@@ -266,7 +358,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
     if (currentParagraphs > 0) {
       const activeParagraph = paragraphs[paragraphs.length - 1] || '';
       const activeParaSentences = countCompleteSentences(activeParagraph);
-      if (activeParaSentences >= 1 && lastEvaluatedTopicSentenceParaIndexRef.current !== currentParagraphs) {
+      if (activeParaSentences >= 1 && currentParagraphs > lastEvaluatedTopicSentenceParaIndexRef.current) {
         lastEvaluatedTopicSentenceParaIndexRef.current = currentParagraphs;
         shouldTriggerImmediately = true;
         triggerReason = `Paragraph ${currentParagraphs} Topic Sentence`;
@@ -294,29 +386,44 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
     if (currentParagraphs < prevParagraphCountRef.current) {
       prevParagraphCountRef.current = currentParagraphs;
     }
+    if (currentParagraphs < lastEvaluatedTopicSentenceParaIndexRef.current) {
+      lastEvaluatedTopicSentenceParaIndexRef.current = currentParagraphs;
+    }
     if (!isConclusionTyped(newText)) {
       checkedConclusionRef.current = false;
     }
 
-    // Continuous Short Typing Pause Trigger (3 Seconds)
+    // Continuous Typing Pause Trigger (7 Seconds debounce, requires >= 15 word delta)
     if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
     pauseTimerRef.current = setTimeout(() => {
-      if (currentWords >= 10) {
+      if (currentWords >= 15 && Math.abs(currentWords - lastEvaluatedWordCountRef.current) >= 15) {
         triggerAnalysis(newText, 'Typing Pause');
       }
-    }, 3000);
+    }, 7000);
   };
 
   // Re-trigger analysis IMMEDIATELY when Target Band or Assistance Mode changes mid-task
   useEffect(() => {
     const currentWords = essayText.trim().split(/\s+/).filter(Boolean).length;
-    if (currentWords >= 10 && assistanceMode === 'ACTIVE_ASSISTANT') {
-      triggerAnalysis(essayText, 'Dynamic Band Target Change');
+    if (currentWords >= 15 && assistanceMode === 'ACTIVE_ASSISTANT') {
+      triggerAnalysis(essayText, 'Dynamic Band Target Change', true);
     }
   }, [targetBand, assistanceMode]);
 
+  const handleRequestSubmit = () => {
+    if (wordCount === 0 || isSubmitting) return;
+    if (wordCount < 50) {
+      setShowShortEssayConfirm(true);
+      return;
+    }
+    onSubmitTask();
+  };
+
   const targetWords = currentPrompt.minWordCount;
   const wordProgressPercent = Math.min(100, Math.round((wordCount / targetWords) * 100));
+
+  const remainingQuota = getRemainingDailyEvaluations();
+  const isAdmin = currentUser?.role === 'admin';
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -447,7 +554,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
         <div className="w-full bg-amber-500/60 rounded-full h-2 overflow-hidden border border-amber-600/30">
           <div
             className={`h-full transition-all duration-500 rounded-full ${
-              wordCount >= targetWords ? 'bg-blue-950 shadow-sm' : 'bg-blue-950'
+              wordCount >= targetWords ? 'bg-emerald-600 shadow-sm' : 'bg-blue-950'
             }`}
             style={{ width: `${wordProgressPercent}%` }}
           />
@@ -479,12 +586,54 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
         </div>
       )}
 
+      {guidanceNotice && (
+        <div className="p-3 rounded-xl bg-slate-100 dark:bg-gray-800/90 border border-slate-200 dark:border-gray-700 text-xs text-slate-700 dark:text-slate-300 flex items-center justify-between gap-3">
+          <span>{guidanceNotice}</span>
+          <button
+            type="button"
+            onClick={() => setGuidanceNotice(null)}
+            className="text-slate-500 hover:text-slate-800 dark:hover:text-white font-semibold shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {showShortEssayConfirm && (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+          <div className="text-xs text-amber-950 dark:text-amber-100 leading-relaxed">
+            <strong>Submit incomplete draft ({wordCount} words)?</strong> Official IELTS requires at least {targetWords} words; responses under 50 words receive a severe Task Response band penalty and still consume 1 daily evaluation credit.
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowShortEssayConfirm(false)}
+              className="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-500/40 text-xs font-semibold text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+            >
+              Continue Writing
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowShortEssayConfirm(false);
+                onSubmitTask();
+              }}
+              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-sm"
+            >
+              Submit Anyway
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Textarea Canvas */}
       <div className="relative flex-1 min-h-[420px] flex flex-col">
         <textarea
           value={essayText}
           onChange={handleTextChange}
           onKeyDown={handleKeyDown}
+          onCopy={handleCopy}
+          onCut={handleCut}
           onPaste={handlePaste}
           onDrop={handleDrop}
           placeholder={
@@ -497,6 +646,35 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
 
         {/* Live Assistant Floating Indicator */}
         <div className="absolute bottom-4 right-6 flex items-center gap-3">
+          {/* Daily Quota & Plan Badge */}
+          <button
+            type="button"
+            onClick={() => !isAdmin && setUpgradeModalOpen(true)}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
+              isAdmin
+                ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 cursor-default'
+                : activePlanCode !== 'FREE'
+                ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+                : remainingQuota > 0
+                ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/20'
+                : 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20'
+            }`}
+            title={
+              isAdmin
+                ? 'Staff Account: Unlimited Evaluations'
+                : `${remainingQuota} of ${dailyEvaluationLimit} daily AI evaluations remaining (${activePlanCode}). Click to manage plan or redeem voucher.`
+            }
+          >
+            <Zap className={`h-3.5 w-3.5 ${activePlanCode !== 'FREE' ? 'text-emerald-500' : remainingQuota > 0 ? 'text-amber-500' : 'text-rose-500'}`} />
+            <span>
+              {isAdmin
+                ? 'Unlimited'
+                : activePlanCode !== 'FREE'
+                ? `Pro • ${remainingQuota}/${dailyEvaluationLimit}`
+                : `${remainingQuota}/${dailyEvaluationLimit} Free Left`}
+            </span>
+          </button>
+
           {isAnalyzing && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-950/90 border border-brand-200 dark:border-brand-500/40 text-xs text-brand-700 dark:text-brand-300 shadow-lg animate-fadeIn">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-500 dark:text-brand-400" />
@@ -505,7 +683,7 @@ export const EditorSurface: React.FC<EditorSurfaceProps> = ({ onSubmitTask, onOp
           )}
 
           <button
-            onClick={onSubmitTask}
+            onClick={handleRequestSubmit}
             disabled={wordCount === 0 || isSubmitting}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >

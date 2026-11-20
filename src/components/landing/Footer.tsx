@@ -29,6 +29,7 @@ export const Footer: React.FC = () => {
               src="/brand-logo.png"
               alt="IELTS Mentor AI Logo"
               fill
+              sizes="48px"
               className="object-cover"
             />
           </div>
@@ -45,6 +46,18 @@ export const Footer: React.FC = () => {
           >
             Practice Workspace
           </button>
+          <Link
+            href="/#pricing"
+            className="hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            Pricing
+          </Link>
+          <Link
+            href="/teacher"
+            className="hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            Teacher Portal
+          </Link>
           <Link
             href="/privacy"
             className="hover:text-slate-900 dark:hover:text-white transition-colors"

@@ -40,6 +40,35 @@ export function getClientIp(req: Request): string {
   return '127.0.0.1';
 }
 
+/**
+ * Derives a rate limit identifier that combines IP with session/token context
+ * to prevent students sharing a classroom or university NAT from blocking each other.
+ */
+export function getRateLimitIdentifier(req: Request, prefix = 'global'): string {
+  const authHeader = req.headers.get('authorization');
+  if (authHeader && authHeader.length > 15) {
+    // Key by the cryptographic token suffix
+    const tokenPart = authHeader.trim().slice(-16);
+    return `${prefix}:auth:${tokenPart}`;
+  }
+
+  const cookieHeader = req.headers.get('cookie') || '';
+  const cookieToken =
+    cookieHeader.match(/ielts_session_token=([^;]+)/)?.[1] ||
+    cookieHeader.match(/ielts_admin_token=([^;]+)/)?.[1];
+  if (cookieToken && cookieToken.length > 15) {
+    return `${prefix}:auth:${cookieToken.trim().slice(-16)}`;
+  }
+
+  const clientSession = req.headers.get('x-client-session');
+  if (clientSession && clientSession.length >= 8) {
+    return `${prefix}:sess:${clientSession.slice(0, 32)}`;
+  }
+
+  const ip = getClientIp(req);
+  return `${prefix}:ip:${ip}`;
+}
+
 export interface RateLimitOptions {
   limit: number;       // Max allowed requests in window
   windowMs: number;    // Window size in milliseconds
@@ -60,8 +89,7 @@ export interface RateLimitResult {
 export function checkRateLimit(req: Request, options: RateLimitOptions): RateLimitResult {
   const now = Date.now();
   const { limit, windowMs, prefix = 'global' } = options;
-  const ip = getClientIp(req);
-  const key = `${prefix}:${ip}`;
+  const key = getRateLimitIdentifier(req, prefix);
 
   cleanupStaleEntries(now, windowMs);
 
@@ -98,6 +126,65 @@ export function checkRateLimit(req: Request, options: RateLimitOptions): RateLim
     resetMs: windowMs,
     retryAfterSeconds: 0,
   };
+}
+
+/**
+ * Distributed rate limiter using Upstash Redis REST when configured, with sliding-window memory fallback.
+ */
+export async function checkRateLimitAsync(
+  req: Request,
+  options: RateLimitOptions
+): Promise<RateLimitResult> {
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!redisUrl || !redisToken) {
+    return checkRateLimit(req, options);
+  }
+
+  const { limit, windowMs, prefix = 'global' } = options;
+  const key = `rl:${getRateLimitIdentifier(req, prefix)}`;
+  const windowSecs = Math.max(1, Math.ceil(windowMs / 1000));
+
+  try {
+    const res = await fetch(`${redisUrl.replace(/\/$/, '')}/pipeline`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${redisToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify([
+        ['INCR', key],
+        ['EXPIRE', key, windowSecs, 'NX'],
+        ['TTL', key],
+      ]),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const count = Number(data?.[0]?.result ?? 1);
+      const ttl = Math.max(1, Number(data?.[2]?.result ?? windowSecs));
+      if (count > limit) {
+        return {
+          allowed: false,
+          limit,
+          remaining: 0,
+          resetMs: ttl * 1000,
+          retryAfterSeconds: ttl,
+        };
+      }
+      return {
+        allowed: true,
+        limit,
+        remaining: Math.max(0, limit - count),
+        resetMs: ttl * 1000,
+        retryAfterSeconds: 0,
+      };
+    }
+  } catch (err) {
+    console.warn('Upstash Redis rate-limit fallback triggered:', err);
+  }
+
+  return checkRateLimit(req, options);
 }
 
 /**

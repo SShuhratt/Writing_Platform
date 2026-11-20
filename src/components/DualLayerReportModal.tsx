@@ -1,34 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWritingStore } from '@/lib/store';
 import { SubmissionReport } from '@/types/ielts';
-import { 
-  Award, 
-  Target, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  Sparkles, 
-  FileText, 
-  ChevronRight, 
-  Download, 
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Sparkles,
   X,
-  TrendingUp,
-  Layers,
-  ListOrdered,
   FileDown,
   Send,
   Copy,
   Check,
   Printer,
-  BookOpen,
-  Zap,
-  ArrowRight
+  Link2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { generateIELTSReportPDF, generateTelegramShareData } from '@/lib/pdf-service';
-import { DynamicBandBadge3D } from '@/components/3d';
+import { generateIELTSReportPDF, generateTelegramShareData, getPublicReportUrl } from '@/lib/pdf-service';
+import { ReportDetailsTabs } from '@/components/ReportDetailsTabs';
 
 interface DualLayerReportModalProps {
   report: SubmissionReport | null;
@@ -39,20 +28,23 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
   const { currentUser } = useWritingStore();
   const [activeTab, setActiveTab] = useState<'LAYER_1' | 'LAYER_2'>('LAYER_1');
   const [copiedSuccess, setCopiedSuccess] = useState(false);
+  const [copiedLinkSuccess, setCopiedLinkSuccess] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Trigger celebration confetti once per unique report if target achieved or exceeded
+  useEffect(() => {
+    if (report && report.layer2AlignmentReport.targetStatus !== 'TARGET_NOT_MET') {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    }
+  }, [report?.id]);
 
   if (!report) return null;
 
   const { layer1ExaminerReport, layer2AlignmentReport, targetBandAtSubmission, modeAtSubmission, wordCount } = report;
-
-  // Trigger celebration confetti if target achieved or exceeded
-  if (layer2AlignmentReport.targetStatus !== 'TARGET_NOT_MET') {
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-  }
 
   const getStatusBadge = () => {
     switch (layer2AlignmentReport.targetStatus) {
@@ -80,7 +72,7 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
     }
   };
 
-  const candidateDisplayName = currentUser?.fullName || currentUser?.username || 'IELTS Candidate';
+  const candidateDisplayName = currentUser?.fullName || currentUser?.username || report.candidateName || 'IELTS Candidate';
 
   const handleDownloadPdf = () => {
     setIsGeneratingPdf(true);
@@ -106,6 +98,17 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
       setTimeout(() => setCopiedSuccess(false), 2500);
     } catch (err) {
       console.error('Copy failed:', err);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const publicUrl = getPublicReportUrl(report.id);
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopiedLinkSuccess(true);
+      setTimeout(() => setCopiedLinkSuccess(false), 2500);
+    } catch (err) {
+      console.error('Copy link failed:', err);
     }
   };
 
@@ -156,6 +159,15 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
             </button>
 
             <button
+              onClick={handleCopyLink}
+              className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/60 transition-all text-xs font-bold flex items-center gap-1.5"
+              title="Copy public /report/[id] deep link"
+            >
+              {copiedLinkSuccess ? <Check className="h-4 w-4 text-emerald-500 dark:text-emerald-400" /> : <Link2 className="h-4 w-4" />}
+              <span className="hidden sm:inline">{copiedLinkSuccess ? 'Link Copied!' : 'Copy Link'}</span>
+            </button>
+
+            <button
               onClick={handleCopySummary}
               className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 hover:text-slate-900 dark:text-gray-300 dark:hover:text-white border border-slate-200 dark:border-gray-700 transition-all text-xs font-semibold flex items-center gap-1.5"
               title="Copy score report summary to clipboard"
@@ -182,403 +194,12 @@ export const DualLayerReportModal: React.FC<DualLayerReportModalProps> = ({ repo
           </div>
         </div>
 
-        {/* Dual Layer Navigation Tabs */}
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-gray-900/90 p-1 rounded-xl border border-slate-200 dark:border-gray-800 mb-5">
-          <button
-            onClick={() => setActiveTab('LAYER_1')}
-            className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'LAYER_1'
-                ? 'bg-amber-500 text-gray-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'
-            }`}
-          >
-            <Award className="h-4 w-4" />
-            <span>Layer 1: Objective Examiner Band Score</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('LAYER_2')}
-            className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'LAYER_2'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-                : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'
-            }`}
-          >
-            <Target className="h-4 w-4" />
-            <span>Layer 2: Target Alignment & Gap Analysis</span>
-          </button>
-        </div>
-
-        {/* Content View */}
-        <div className="overflow-y-auto flex-1 pr-1 space-y-5">
-          
-          {/* LAYER 1 VIEW */}
-          {activeTab === 'LAYER_1' && (
-            <div className="space-y-5">
-              
-              {/* 3D Medal Achievement Showcase & Examiner Summary */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-center gap-4">
-                <div className="w-[180px] h-[180px] shrink-0">
-                  <DynamicBandBadge3D
-                    bandScore={layer1ExaminerReport.overallBand}
-                  />
-                </div>
-                <div className="flex-1 space-y-2 text-center sm:text-left">
-                  <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                      3D Certified Medal
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-gray-400">
-                      WebGL Physical Medal • Drag to Rotate
-                    </span>
-                  </div>
-                  <h4 className="font-extrabold text-base text-slate-900 dark:text-white">
-                    {layer1ExaminerReport.overallBand >= 8 
-                      ? 'Band 8+ Mastery Achievement' 
-                      : layer1ExaminerReport.overallBand >= 7 
-                      ? 'Band 7+ Professional Competence' 
-                      : 'Band Certified Submission'}
-                  </h4>
-                  <p className="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">
-                    {layer1ExaminerReport.examinerSummary}
-                  </p>
-                </div>
-              </div>
-
-              {/* 4 Official Criteria Sub-Score Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                {/* 1. Task Response / Achievement */}
-                <div className="p-4 rounded-xl glass-card space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white">Task Achievement / Response</span>
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 font-extrabold text-sm border border-amber-500/30">
-                      Band {layer1ExaminerReport.taskResponse.score.toFixed(1)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-gray-300">{layer1ExaminerReport.taskResponse.commentary}</p>
-                  <div className="space-y-1 text-[11px]">
-                    <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Strengths:</div>
-                    <ul className="list-disc list-inside text-slate-500 dark:text-gray-400">
-                      {layer1ExaminerReport.taskResponse.keyStrengths.map((s, i) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* 2. Coherence & Cohesion */}
-                <div className="p-4 rounded-xl glass-card space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white">Coherence & Cohesion</span>
-                    <span className="px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-700 dark:text-sky-300 font-extrabold text-sm border border-sky-500/30">
-                      Band {layer1ExaminerReport.coherenceCohesion.score.toFixed(1)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-gray-300">{layer1ExaminerReport.coherenceCohesion.commentary}</p>
-                  <div className="space-y-1 text-[11px]">
-                    <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Strengths:</div>
-                    <ul className="list-disc list-inside text-slate-500 dark:text-gray-400">
-                      {layer1ExaminerReport.coherenceCohesion.keyStrengths.map((s, i) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* 3. Lexical Resource */}
-                <div className="p-4 rounded-xl glass-card space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white">Lexical Resource</span>
-                    <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-700 dark:text-purple-300 font-extrabold text-sm border border-purple-500/30">
-                      Band {layer1ExaminerReport.lexicalResource.score.toFixed(1)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-gray-300">{layer1ExaminerReport.lexicalResource.commentary}</p>
-                  <div className="space-y-1 text-[11px]">
-                    <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Strengths:</div>
-                    <ul className="list-disc list-inside text-slate-500 dark:text-gray-400">
-                      {layer1ExaminerReport.lexicalResource.keyStrengths.map((s, i) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* 4. Grammatical Range & Accuracy */}
-                <div className="p-4 rounded-xl glass-card space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white">Grammatical Range & Accuracy</span>
-                    <span className="px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-extrabold text-sm border border-indigo-500/30">
-                      Band {layer1ExaminerReport.grammaticalAccuracy.score.toFixed(1)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-gray-300">{layer1ExaminerReport.grammaticalAccuracy.commentary}</p>
-                  <div className="space-y-1 text-[11px]">
-                    <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Strengths:</div>
-                    <ul className="list-disc list-inside text-slate-500 dark:text-gray-400">
-                      {layer1ExaminerReport.grammaticalAccuracy.keyStrengths.map((s, i) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* LAYER 2 VIEW */}
-          {activeTab === 'LAYER_2' && (
-            <div className="space-y-6">
-              
-              {/* Gap Analysis Summary Banner */}
-              <div className="p-5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 space-y-2.5">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
-                    <Target className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                    Target Alignment Audit (Target: Band {targetBandAtSubmission} vs Achieved: Band {layer1ExaminerReport.overallBand.toFixed(1)})
-                  </h4>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                    layer2AlignmentReport.targetStatus === 'TARGET_ACHIEVED'
-                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                      : layer2AlignmentReport.targetStatus === 'EXCEEDED_TARGET'
-                      ? 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30'
-                      : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                  }`}>
-                    {layer2AlignmentReport.targetStatus === 'TARGET_ACHIEVED' ? 'Target Met' : layer2AlignmentReport.targetStatus === 'EXCEEDED_TARGET' ? 'Target Exceeded' : 'Target Not Met'}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">
-                  {layer2AlignmentReport.gapAnalysis}
-                </p>
-              </div>
-
-              {/* 1. Structural & Word-Count Diagnostic */}
-              {layer2AlignmentReport.specificRecommendations?.structuralDiagnosis && (
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-800 space-y-4">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                      <Layers className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      Structural & Word-Count Diagnostic
-                    </h4>
-                    <span className="text-[11px] font-medium text-slate-500 dark:text-gray-400">
-                      IELTS Standard Structure Audit
-                    </span>
-                  </div>
-
-                  {/* Word Count & Paragraph Stats Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Word Count Metric */}
-                    <div className="p-3 rounded-xl bg-white dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700/60 flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Submission Length</div>
-                        <div className="text-base font-extrabold text-slate-900 dark:text-white flex items-baseline gap-1.5">
-                          <span>{layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.submitted}</span>
-                          <span className="text-xs font-normal text-slate-500 dark:text-gray-400">/ {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.required} min words</span>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                        layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.status === 'OPTIMAL'
-                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                          : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
-                      }`}>
-                        {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.status === 'OPTIMAL' ? 'Meets Threshold' : `Short (-${layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.difference}w)`}
-                      </span>
-                    </div>
-
-                    {/* Paragraph Count Metric */}
-                    <div className="p-3 rounded-xl bg-white dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700/60 flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Paragraph Architecture</div>
-                        <div className="text-base font-extrabold text-slate-900 dark:text-white flex items-baseline gap-1.5">
-                          <span>{layer2AlignmentReport.specificRecommendations.structuralDiagnosis.paragraphCountAudit.detected}</span>
-                          <span className="text-xs font-normal text-slate-500 dark:text-gray-400">/ {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.paragraphCountAudit.recommended} recommended</span>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                        layer2AlignmentReport.specificRecommendations.structuralDiagnosis.paragraphCountAudit.detected >= 4
-                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                          : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                      }`}>
-                        {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.paragraphCountAudit.detected >= 4 ? 'Standard Layout' : 'Needs Division'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Warning message if under-length or single-paragraph */}
-                  {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.penaltyWarning && (
-                    <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-rose-900 dark:text-rose-300 text-xs flex items-start gap-2.5">
-                      <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-bold">Task Achievement Penalty Warning: </span>
-                        <span>{layer2AlignmentReport.specificRecommendations.structuralDiagnosis.wordCountAudit.penaltyWarning}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Paragraph Structure Breakdown Note */}
-                  <div className="text-xs text-slate-600 dark:text-gray-300 bg-white dark:bg-gray-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-gray-800 space-y-2">
-                    <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <BookOpen className="h-3.5 w-3.5 text-blue-500" /> Recommended 4-Paragraph Blueprint:
-                    </p>
-                    <ul className="space-y-1.5 text-[11px] text-slate-600 dark:text-gray-300">
-                      {layer2AlignmentReport.specificRecommendations.structuralDiagnosis.recommendedBlueprint.map((step, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-blue-500 font-bold shrink-0 mt-0.5">•</span>
-                          <span>{step}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/* 2. Target Band Lexical & Collocation Upgrades */}
-              {layer2AlignmentReport.specificRecommendations?.lexicalUpgrades && layer2AlignmentReport.specificRecommendations.lexicalUpgrades.length > 0 && (
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-800 space-y-4">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                      Target Band 7.5–9.0 Lexical & Collocation Upgrades
-                    </h4>
-                    <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
-                      Grounded in Your Draft
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-gray-300">
-                    Replace simplistic or informal phrasing identified in your essay with examiner-preferred academic collocations:
-                  </p>
-
-                  <div className="space-y-3">
-                    {layer2AlignmentReport.specificRecommendations.lexicalUpgrades.map((item, idx) => (
-                      <div key={idx} className="p-3.5 rounded-xl bg-white dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700/60 space-y-2.5">
-                        <div className="flex items-center gap-2 flex-wrap text-xs">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">In Your Text:</span>
-                          <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-gray-700 text-slate-800 dark:text-gray-200 font-semibold italic text-[11px]">
-                            &ldquo;{item.originalPhrase}&rdquo;
-                          </span>
-                          <ArrowRight className="h-3.5 w-3.5 text-purple-500" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">High-Band Alternatives:</span>
-                        </div>
-
-                        {/* Collocation Badges */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {item.suggestedCollocations.map((colloc, cIdx) => (
-                            <span
-                              key={cIdx}
-                              className="px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-200 font-bold text-xs border border-purple-200 dark:border-purple-800/50 shadow-sm"
-                            >
-                              {colloc}
-                            </span>
-                          ))}
-                        </div>
-
-                        {/* Pedagogical context */}
-                        <p className="text-[11px] text-slate-500 dark:text-gray-400 italic">
-                          💡 <span className="font-semibold text-slate-700 dark:text-gray-300">Examiner Advice:</span> {item.pedagogicalContext}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 3. Target Band Grammatical Variety Boosters */}
-              {layer2AlignmentReport.specificRecommendations?.grammarBoosters && layer2AlignmentReport.specificRecommendations.grammarBoosters.length > 0 && (
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-800 space-y-4">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                      Grammatical Range & Accuracy (GRA) Score Boosters
-                    </h4>
-                    <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                      Target Band 7.5+ Syntactic Forms
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-gray-300">
-                    To reach Band 7.5–8.5 in Grammatical Range, master these complex sentence structures tailored to this essay topic:
-                  </p>
-
-                  <div className="space-y-3">
-                    {layer2AlignmentReport.specificRecommendations.grammarBoosters.map((booster, bIdx) => (
-                      <div key={bIdx} className="p-3.5 rounded-xl bg-white dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700/60 space-y-2 text-xs">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                            <span className="h-4 w-4 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 font-extrabold text-[10px] flex items-center justify-center">
-                              {bIdx + 1}
-                            </span>
-                            {booster.structureType}
-                          </span>
-                        </div>
-
-                        {/* Pattern formula */}
-                        <div className="p-2 rounded-lg bg-slate-100 dark:bg-gray-900 text-slate-800 dark:text-gray-200 font-mono text-[11px] border border-slate-200 dark:border-gray-700/80">
-                          <span className="text-slate-500 dark:text-gray-400 font-sans font-medium">Syntactic Pattern: </span>
-                          {booster.syntacticPattern}
-                        </div>
-
-                        {/* Topic-tailored example */}
-                        <div className="p-2.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 text-slate-800 dark:text-gray-200 text-xs">
-                          <span className="font-bold text-amber-800 dark:text-amber-400">Tailored Example for This Topic: </span>
-                          <span className="italic font-medium">&ldquo;{booster.tailoredExample}&rdquo;</span>
-                        </div>
-
-                        {/* Examiner Rationale */}
-                        <p className="text-[11px] text-slate-500 dark:text-gray-400">
-                          🎯 <span className="font-semibold text-slate-700 dark:text-gray-300">Why examiners award this:</span> {booster.examinerRationale}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 4. Paragraph-by-Paragraph Alignment Audit Table */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-xs text-slate-700 dark:text-gray-300 uppercase tracking-wider">Paragraph Alignment Breakdown</h4>
-                <div className="space-y-2">
-                  {layer2AlignmentReport.paragraphAudits.map((audit) => (
-                    <div
-                      key={audit.paragraphNumber}
-                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-gray-900/90 border border-slate-200 dark:border-gray-800 flex items-start justify-between gap-4 text-xs"
-                    >
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                          <span>Paragraph {audit.paragraphNumber}</span>
-                          <span className="text-[10px] text-slate-500 dark:text-gray-500 italic">&quot;{audit.textSnippet}&quot;</span>
-                        </div>
-                        <p className="text-slate-600 dark:text-gray-300">{audit.analysis}</p>
-                      </div>
-
-                      <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] shrink-0 ${
-                        audit.status === 'MET'
-                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                          : audit.status === 'EXCEEDED'
-                          ? 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30'
-                          : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                      }`}>
-                        {audit.status === 'MET' ? 'Target Met' : audit.status === 'EXCEEDED' ? 'Exceeded' : 'Below Target'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 5. Dynamic Actionable Improvement Roadmap */}
-              <div className="p-5 rounded-2xl glass-card space-y-3 border-l-4 border-l-brand-500">
-                <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <ListOrdered className="h-4 w-4 text-brand-600 dark:text-brand-400" />
-                  Actionable Gap-Bridging Roadmap for Next Session
-                </h4>
-                <ul className="space-y-2.5 text-xs text-slate-600 dark:text-gray-300">
-                  {layer2AlignmentReport.actionableRoadmap.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2.5">
-                      <span className="h-5 w-5 rounded-full bg-brand-500/20 text-brand-700 dark:text-brand-300 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                        {idx + 1}
-                      </span>
-                      <span className="leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-            </div>
-          )}
-
-        </div>
+        <ReportDetailsTabs
+          report={report}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          scrollable
+        />
 
         {/* Footer Actions Strip */}
         <div className="border-t border-slate-200 dark:border-gray-800 pt-4 mt-3 flex items-center justify-between gap-3 flex-wrap">

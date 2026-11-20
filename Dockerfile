@@ -1,0 +1,64 @@
+FROM node:20-alpine AS base
+
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Build-time public environment arguments injected by Coolify / Docker builds
+ARG NEXT_PUBLIC_SITE_URL=""
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=""
+ARG NEXT_PUBLIC_SUPPORT_EMAIL=""
+ARG NEXT_PUBLIC_SUPPORT_TELEGRAM=""
+ARG NEXT_PUBLIC_PRO_MONTHLY_PRICE_UZS=""
+ARG NEXT_PUBLIC_PRO_MONTHLY_PRICE_USD=""
+ARG NEXT_PUBLIC_PRO_QUARTERLY_PRICE_UZS=""
+ARG NEXT_PUBLIC_PRO_QUARTERLY_PRICE_USD=""
+ARG NEXT_PUBLIC_SCHOOL_SEAT_PRICE_UZS=""
+ARG NEXT_PUBLIC_SCHOOL_SEAT_PRICE_USD=""
+
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+ENV NEXT_PUBLIC_SUPPORT_EMAIL=${NEXT_PUBLIC_SUPPORT_EMAIL}
+ENV NEXT_PUBLIC_SUPPORT_TELEGRAM=${NEXT_PUBLIC_SUPPORT_TELEGRAM}
+ENV NEXT_PUBLIC_PRO_MONTHLY_PRICE_UZS=${NEXT_PUBLIC_PRO_MONTHLY_PRICE_UZS}
+ENV NEXT_PUBLIC_PRO_MONTHLY_PRICE_USD=${NEXT_PUBLIC_PRO_MONTHLY_PRICE_USD}
+ENV NEXT_PUBLIC_PRO_QUARTERLY_PRICE_UZS=${NEXT_PUBLIC_PRO_QUARTERLY_PRICE_UZS}
+ENV NEXT_PUBLIC_PRO_QUARTERLY_PRICE_USD=${NEXT_PUBLIC_PRO_QUARTERLY_PRICE_USD}
+ENV NEXT_PUBLIC_SCHOOL_SEAT_PRICE_UZS=${NEXT_PUBLIC_SCHOOL_SEAT_PRICE_UZS}
+ENV NEXT_PUBLIC_SCHOOL_SEAT_PRICE_USD=${NEXT_PUBLIC_SCHOOL_SEAT_PRICE_USD}
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+RUN mkdir .next && chown nextjs:nodejs .next
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+CMD ["node", "server.js"]
+

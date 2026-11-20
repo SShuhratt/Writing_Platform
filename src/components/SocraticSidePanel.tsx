@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useWritingStore } from '@/lib/store';
 import { SocraticGuidanceCard, GuidanceCategory } from '@/types/ielts';
 import { 
@@ -84,42 +85,49 @@ export const SocraticSidePanel: React.FC = () => {
             </p>
           </div>
         ) : (
-          guidanceCards.map((card) => (
-            <div
-              key={card.id}
-              className="p-4 rounded-xl glass-card space-y-2.5 transition-all border-l-4 border-l-brand-500 relative group"
-            >
-              <div className="flex items-center justify-between">
-                {categoryBadge(card.category)}
-                <button
-                  onClick={() => clearGuidanceCard(card.id)}
-                  className="text-slate-400 hover:text-slate-700 dark:text-gray-500 dark:hover:text-gray-300 text-xs p-1 rounded hover:bg-slate-100 dark:hover:bg-gray-800"
-                  title="Dismiss card"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              <h4 className="font-bold text-xs text-slate-900 dark:text-white leading-snug">
-                {card.title}
-              </h4>
-
-              {card.highlightSnippet && (
-                <div className="text-[11px] p-2 rounded bg-slate-100 dark:bg-gray-900/90 text-slate-700 dark:text-gray-400 border border-slate-200 dark:border-gray-800 italic">
-                  &quot;{card.highlightSnippet}&quot;
+          <AnimatePresence initial={false}>
+            {guidanceCards.map((card) => (
+              <motion.div
+                key={card.id}
+                layout
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 16, scale: 0.96 }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                className="p-4 rounded-xl glass-card space-y-2.5 border-l-4 border-l-brand-500 relative group"
+              >
+                <div className="flex items-center justify-between">
+                  {categoryBadge(card.category)}
+                  <button
+                    onClick={() => clearGuidanceCard(card.id)}
+                    className="text-slate-400 hover:text-slate-700 dark:text-gray-500 dark:hover:text-gray-300 text-xs p-1 rounded hover:bg-slate-100 dark:hover:bg-gray-800"
+                    title="Dismiss card"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-              )}
 
-              <p className="text-xs text-indigo-950 dark:text-brand-200 leading-relaxed bg-indigo-50 dark:bg-brand-950/30 p-2.5 rounded-lg border border-indigo-200 dark:border-brand-500/20">
-                {card.socraticPrompt}
-              </p>
+                <h4 className="font-bold text-xs text-slate-900 dark:text-white leading-snug">
+                  {card.title}
+                </h4>
 
-              <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-gray-500 pt-1">
-                <span>Paragraph {card.paragraphIndex}</span>
-                <span>Criteria: Band {card.targetBandContext}</span>
-              </div>
-            </div>
-          ))
+                {card.highlightSnippet && (
+                  <div className="text-[11px] p-2 rounded bg-slate-100 dark:bg-gray-900/90 text-slate-700 dark:text-gray-400 border border-slate-200 dark:border-gray-800 italic">
+                    &quot;{card.highlightSnippet}&quot;
+                  </div>
+                )}
+
+                <p className="text-xs text-indigo-950 dark:text-brand-200 leading-relaxed bg-indigo-50 dark:bg-brand-950/30 p-2.5 rounded-lg border border-indigo-200 dark:border-brand-500/20">
+                  {card.socraticPrompt}
+                </p>
+
+                <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-gray-500 pt-1">
+                  <span>Paragraph {card.paragraphIndex}</span>
+                  <span>Criteria: Band {card.targetBandContext}</span>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         )}
       </div>
 

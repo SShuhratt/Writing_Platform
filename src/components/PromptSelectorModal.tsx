@@ -13,7 +13,8 @@ interface PromptSelectorModalProps {
 }
 
 export const PromptSelectorModal: React.FC<PromptSelectorModalProps> = ({ isOpen, onClose }) => {
-  const { currentPrompt, setPrompt } = useWritingStore();
+  const { currentPrompt, essayText, setPrompt } = useWritingStore();
+  const [pendingSwitchPrompt, setPendingSwitchPrompt] = useState<IELTSTaskPrompt | null>(null);
   const [promptsList, setPromptsList] = useState<IELTSTaskPrompt[]>(OFFICIAL_PROMPTS_DATABASE);
   const [dataSource, setDataSource] = useState<'turso' | 'supabase' | 'fallback'>('fallback');
   const [selectedTaskType, setSelectedTaskType] = useState<string>('ALL');
@@ -98,7 +99,19 @@ export const PromptSelectorModal: React.FC<PromptSelectorModalProps> = ({ isOpen
   if (!isOpen) return null;
 
   const handleSelectPrompt = (prompt: IELTSTaskPrompt) => {
+    if (prompt.id !== currentPrompt.id && essayText.trim().length > 0) {
+      setPendingSwitchPrompt(prompt);
+      return;
+    }
     setPrompt(prompt);
+    setPendingSwitchPrompt(null);
+    onClose();
+  };
+
+  const confirmPromptSwitch = () => {
+    if (!pendingSwitchPrompt) return;
+    setPrompt(pendingSwitchPrompt);
+    setPendingSwitchPrompt(null);
     onClose();
   };
 
@@ -154,12 +167,40 @@ export const PromptSelectorModal: React.FC<PromptSelectorModalProps> = ({ isOpen
           </div>
 
           <button
-            onClick={onClose}
+            onClick={() => {
+              setPendingSwitchPrompt(null);
+              onClose();
+            }}
             className="text-slate-400 hover:text-slate-700 dark:text-gray-400 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-800"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {pendingSwitchPrompt && (
+          <div className="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="text-xs text-amber-950 dark:text-amber-100 leading-relaxed">
+              <strong>Switch to &ldquo;{pendingSwitchPrompt.title}&rdquo;?</strong> Your current essay draft will be auto-saved under{' '}
+              <em>{currentPrompt.title}</em> and can be resumed anytime.
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setPendingSwitchPrompt(null)}
+                className="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-500/40 text-xs font-semibold text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+              >
+                Keep Current Task
+              </button>
+              <button
+                type="button"
+                onClick={confirmPromptSwitch}
+                className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-sm"
+              >
+                Save Draft &amp; Switch
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Search Bar & Filters */}
         <div className="space-y-3 mb-4">

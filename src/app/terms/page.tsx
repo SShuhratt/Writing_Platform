@@ -1,6 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { FileCheck, ArrowLeft, BookOpen, AlertTriangle } from 'lucide-react';
+import {
+  CANONICAL_SITE_URL,
+  PUBLIC_SUPPORT_EMAIL,
+  PUBLIC_SUPPORT_TELEGRAM,
+} from '@/lib/pricing-config';
 
 export const metadata = {
   title: 'Terms of Service | IELTS Mentor AI',
@@ -46,8 +51,8 @@ export default function TermsOfServicePage() {
           </h2>
           <p className="text-slate-600 dark:text-gray-300">
             By creating an account, accessing, or using <strong>IELTS Mentor AI</strong> (&ldquo;the Service&rdquo;) available at{' '}
-            <a href="https://writing-platform-two.vercel.app" className="text-brand-600 dark:text-brand-400 underline">
-              https://writing-platform-two.vercel.app
+            <a href={CANONICAL_SITE_URL} className="text-brand-600 dark:text-brand-400 underline">
+              {CANONICAL_SITE_URL}
             </a>,
             you agree to be bound by these Terms of Service. If you do not agree, you must discontinue using the platform immediately.
           </p>
@@ -84,9 +89,28 @@ export default function TermsOfServicePage() {
           </p>
         </div>
 
+        {/* Subscriptions, Quotas, Billing & Refunds */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 shadow-sm space-y-3 leading-relaxed text-sm">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">5. Plans, Quotas, Billing &amp; Refunds</h2>
+          <ul className="list-disc pl-5 space-y-1.5 text-slate-600 dark:text-gray-300 text-xs">
+            <li>
+              <strong>Daily Rolling Quotas:</strong> Free Practice accounts receive 2 full AI evaluations per UTC day; IELTS Pro plans and active School Cohort Seats receive up to 20 AI evaluations per UTC day under fair-use policy.
+            </li>
+            <li>
+              <strong>AI Outage Protection:</strong> If an evaluation cannot complete due to a verified upstream AI outage (HTTP 503), no daily evaluation credit is deducted from your account.
+            </li>
+            <li>
+              <strong>Manual Card Transfer &amp; Payment Verification:</strong> Manual P2P bank card orders require an accurate transfer reference or receipt screenshot and are normally verified within 1–12 hours. Only one pending manual order per account is permitted at a time.
+            </li>
+            <li>
+              <strong>Vouchers &amp; Refunds:</strong> Promo and academy seat vouchers are single-redemption per account and non-transferable. Unused paid subscriptions may be refunded within 7 calendar days of purchase by contacting support with your Order ID; approved refunds revoke remaining Pro entitlement duration.
+            </li>
+          </ul>
+        </div>
+
         {/* Prohibited Activities */}
         <div className="p-6 rounded-2xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 shadow-sm space-y-3 leading-relaxed text-sm">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">5. Prohibited Activities</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">6. Prohibited Activities</h2>
           <ul className="list-disc pl-5 space-y-1 text-slate-600 dark:text-gray-300 text-xs">
             <li>Attempting to bypass security, rate limits, or reverse-engineer the API.</li>
             <li>Submitting malicious code, scripts, or abusive content.</li>
@@ -96,10 +120,13 @@ export default function TermsOfServicePage() {
 
         {/* Contact */}
         <div className="p-6 rounded-2xl bg-slate-100 dark:bg-gray-900/60 border border-slate-200 dark:border-gray-800 text-xs text-slate-600 dark:text-gray-400 space-y-2">
-          <h3 className="font-bold text-slate-900 dark:text-white text-sm">6. Contact Information</h3>
-          <p>For questions or assistance regarding these terms:</p>
-          <p className="font-mono">Email: support@ieltsmentor.ai</p>
-          <p>Website: https://writing-platform-two.vercel.app</p>
+          <h3 className="font-bold text-slate-900 dark:text-white text-sm">7. Contact Information</h3>
+          <p>For billing disputes, refunds, or legal inquiries regarding these terms:</p>
+          <p className="font-mono">Email: {PUBLIC_SUPPORT_EMAIL}</p>
+          {PUBLIC_SUPPORT_TELEGRAM && (
+            <p className="font-mono">Telegram Support: {PUBLIC_SUPPORT_TELEGRAM}</p>
+          )}
+          <p>Website: {CANONICAL_SITE_URL}</p>
         </div>
       </main>
     </div>

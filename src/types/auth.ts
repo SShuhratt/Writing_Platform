@@ -1,6 +1,6 @@
 import { TargetBand } from './ielts';
 
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'user' | 'teacher' | 'admin';
 
 export interface User {
   id: string;
@@ -9,6 +9,9 @@ export interface User {
   fullName: string;
   role: UserRole;
   targetBand: TargetBand;
+  schoolName?: string;
+  authProvider?: 'local' | 'google' | 'convomate';
+  emailVerified?: boolean;
   createdAt: number;
 }
 

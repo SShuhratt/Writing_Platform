@@ -1,0 +1,17 @@
+node_modules
+.next
+.test-dist
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.vercel
+.vscode
+*.log
+*.db
+*.db-shm
+*.db-wal
+__pycache__
+tests
+

@@ -1,5 +1,39 @@
 import { jsPDF } from 'jspdf';
 import { SubmissionReport } from '@/types/ielts';
+import { CANONICAL_SITE_URL } from '@/lib/pricing-config';
+
+const CYRILLIC_TO_LATIN_MAP: Record<string, string> = {
+  А: 'A', Б: 'B', В: 'V', Г: 'G', Д: 'D', Е: 'E', Ё: 'Yo', Ж: 'Zh', З: 'Z', И: 'I', Й: 'Y',
+  К: 'K', Л: 'L', М: 'M', Н: 'N', О: 'O', П: 'P', Р: 'R', С: 'S', Т: 'T', У: 'U', Ф: 'F',
+  Х: 'Kh', Ц: 'Ts', Ч: 'Ch', Ш: 'Sh', Щ: 'Shch', Ъ: '', Ы: 'Y', Ь: '', Э: 'E', Ю: 'Yu', Я: 'Ya',
+  Ў: "O'", Қ: 'Q', Ғ: "G'", Ҳ: 'H',
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z', и: 'i', й: 'y',
+  к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f',
+  х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+  ў: "o'", қ: 'q', ғ: "g'", ҳ: 'h',
+};
+
+/**
+ * Normalizes smart punctuation, Uzbek/Cyrillic glyphs, and non-WinAnsi characters
+ * so jsPDF standard fonts render names, essays, and feedback cleanly without garbled bytes.
+ */
+export function sanitizePdfText(input: string): string {
+  if (!input) return '';
+  const replaced = input
+    .replace(/[ʻʼ’‘‚‛]/g, "'")
+    .replace(/[“”„‟]/g, '"')
+    .replace(/[—–]/g, '-')
+    .replace(/[•·]/g, '*')
+    .replace(/…/g, '...')
+    .replace(/➔|→/g, '->')
+    .replace(/[^\x00-\xFF]/g, (ch) => CYRILLIC_TO_LATIN_MAP[ch] ?? ch);
+
+  // Strip diacritic marks / residual non-Latin1 codepoints cleanly
+  return replaced
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E\xA0-\xFF\n\r\t]/g, '');
+}
 
 /**
  * Generates an official-grade IELTS Test Report Form (TRF) style PDF document
@@ -11,6 +45,20 @@ export function generateIELTSReportPDF(report: SubmissionReport, candidateName?:
     unit: 'mm',
     format: 'a4'
   });
+
+  // Wrap text/split helpers so every PDF string renders Unicode names and typography safely
+  const rawText = doc.text.bind(doc);
+  doc.text = ((text: string | string[], x: number, y: number, options?: any, transform?: any) => {
+    const clean = Array.isArray(text)
+      ? text.map((line) => sanitizePdfText(String(line)))
+      : sanitizePdfText(String(text));
+    return rawText(clean as any, x, y, options, transform);
+  }) as typeof doc.text;
+
+  const rawSplit = doc.splitTextToSize.bind(doc);
+  doc.splitTextToSize = ((text: string, maxLen: number, options?: any) => {
+    return rawSplit(sanitizePdfText(String(text)), maxLen, options);
+  }) as typeof doc.splitTextToSize;
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -470,15 +518,28 @@ export function generateIELTSReportPDF(report: SubmissionReport, candidateName?:
 }
 
 /**
+ * Builds the canonical shareable /report/[id] deep-link URL using NEXT_PUBLIC_SITE_URL or active browser origin.
+ */
+export function getPublicReportUrl(reportId: string): string {
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : CANONICAL_SITE_URL;
+  return `${origin}/report/${encodeURIComponent(reportId)}`;
+}
+
+/**
  * Builds a Telegram share URL and rich text payload for instant one-click sharing
  */
 export function generateTelegramShareData(report: SubmissionReport, candidateName?: string): {
   shareUrl: string;
   shareText: string;
+  reportUrl: string;
 } {
   const overall = report.layer1ExaminerReport.overallBand.toFixed(1);
   const target = report.targetBandAtSubmission;
   const status = report.layer2AlignmentReport.targetStatus;
+  const resolvedCandidate = candidateName || report.candidateName || 'Student';
   
   let statusEmoji = '🎯';
   let statusLabel = 'Target Achieved!';
@@ -490,7 +551,7 @@ export function generateTelegramShareData(report: SubmissionReport, candidateNam
     statusLabel = 'In Progress (Target Not Yet Met)';
   }
 
-  const appUrl = 'https://writing-platform-git-main-sshuhratts-projects.vercel.app/workspace';
+  const reportUrl = getPublicReportUrl(report.id);
 
   const topRoadmap = report.layer2AlignmentReport.actionableRoadmap[0] || 'Expand argument depth';
   const recs = report.layer2AlignmentReport.specificRecommendations;
@@ -503,7 +564,7 @@ export function generateTelegramShareData(report: SubmissionReport, candidateNam
 
   const shareText = `🎓 *IELTS Writing Assessment Result*
 ━━━━━━━━━━━━━━━━━━━━
-👤 *Candidate:* ${candidateName || 'Student'}
+👤 *Candidate:* ${resolvedCandidate}
 📝 *Task:* ${report.taskPrompt.title} (${report.taskPrompt.type === 'TASK_2_ESSAY' ? 'Task 2 Essay' : 'Task 1'})
 🎯 *Target Band:* Band ${target}
 ${statusEmoji} *Achieved Score:* *Band ${overall}* (${statusLabel})
@@ -520,10 +581,10 @@ ${statusEmoji} *Achieved Score:* *Band ${overall}* (${statusLabel})
 📌 *Priority Roadmap Focus:*
 1. ${topRoadmap}${topLex}${topGra}
 ━━━━━━━━━━━━━━━━━━━━
-✨ *Practice & Assessment on IELTS Mentor:*
-${appUrl}`;
+📄 *Full Certified Report & Practice Topic:*
+${reportUrl}`;
 
-  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(shareText)}`;
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(reportUrl)}&text=${encodeURIComponent(shareText)}`;
 
-  return { shareUrl, shareText };
+  return { shareUrl, shareText, reportUrl };
 }

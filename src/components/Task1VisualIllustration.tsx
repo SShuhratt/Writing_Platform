@@ -32,6 +32,26 @@ export const Task1VisualIllustration: React.FC<Task1VisualIllustrationProps> = (
   const [isExpanded, setIsExpanded] = useState(false);
   const [view3D, setView3D] = useState(false);
 
+  const MAPPED_3D_CHART_IDS = new Set([
+    'task1-acad-water-consumption',
+    'task1-acad-electricity-production',
+    'task1-acad-household-expenditure',
+  ]);
+
+  const MAPPED_DIAGRAM_IDS = new Set([
+    'task1-acad-water-consumption',
+    'task1-acad-electricity-production',
+    'task1-acad-household-expenditure',
+    'task1-acad-brick-manufacturing',
+    'task1-acad-hydroelectric-dam',
+    'task1-acad-norbiton-town-map',
+    'task1-acad-felixstone-coastal-resort',
+    'task1-acad-tourist-destinations-table',
+  ]);
+
+  const hasVerifiedDiagram = MAPPED_DIAGRAM_IDS.has(promptId);
+  const hasVerified3D = MAPPED_3D_CHART_IDS.has(promptId);
+
   const getChartData3D = (): DataPoint3D[] => {
     switch (promptId) {
       case 'task1-acad-water-consumption':
@@ -57,16 +77,11 @@ export const Task1VisualIllustration: React.FC<Task1VisualIllustrationProps> = (
           { label: 'Leisure', value: 14, color: '#ec4899' },
         ];
       default:
-        return [
-          { label: 'Sector A', value: 85, color: '#6366f1' },
-          { label: 'Sector B', value: 65, color: '#f59e0b' },
-          { label: 'Sector C', value: 45, color: '#10b981' },
-          { label: 'Sector D', value: 30, color: '#ec4899' },
-        ];
+        return [];
     }
   };
 
-  // Render the appropriate diagram based on promptId or illustrationType
+  // Render verified bespoke diagram for mapped prompts, or honest specification notice otherwise
   const renderDiagram = () => {
     switch (promptId) {
       case 'task1-acad-water-consumption':
@@ -86,12 +101,17 @@ export const Task1VisualIllustration: React.FC<Task1VisualIllustrationProps> = (
       case 'task1-acad-tourist-destinations-table':
         return <TableTouristData />;
       default:
-        if (illustrationType === 'BAR_CHART') return <BarChartElectricity />;
-        if (illustrationType === 'PIE_CHARTS') return <PieChartsExpenditure />;
-        if (illustrationType === 'PROCESS_DIAGRAM') return <ProcessDiagramBricks />;
-        if (illustrationType === 'MAP_COMPARISON') return <MapComparisonNorbiton />;
-        if (illustrationType === 'TABLE') return <TableTouristData />;
-        return <LineGraphWaterUsage />;
+        return (
+          <div className="w-full p-5 rounded-xl bg-slate-50 dark:bg-gray-900/70 border border-dashed border-slate-300 dark:border-gray-700 text-center space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[11px] font-bold">
+              <Info className="h-3.5 w-3.5" />
+              <span>Custom Visual Specification</span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-gray-300 max-w-xl mx-auto leading-relaxed">
+              Use the {illustrationType ? illustrationType.replace(/_/g, ' ').toLowerCase() : 'Task 1 visual'} parameters described directly in the prompt question card above. A generic placeholder chart is omitted so data never conflicts with your task.
+            </p>
+          </div>
+        );
     }
   };
 
@@ -124,45 +144,49 @@ export const Task1VisualIllustration: React.FC<Task1VisualIllustrationProps> = (
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-gray-800 p-0.5 rounded-lg border border-slate-200 dark:border-gray-700">
-              <button
-                onClick={() => setView3D(false)}
-                className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
-                  !view3D
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                2D Chart
-              </button>
-              <button
-                onClick={() => setView3D(true)}
-                className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-all ${
-                  view3D
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Box className="h-3 w-3" />
-                <span>3D WebGL</span>
-              </button>
-            </div>
+            {hasVerified3D && (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-gray-800 p-0.5 rounded-lg border border-slate-200 dark:border-gray-700">
+                <button
+                  onClick={() => setView3D(false)}
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
+                    !view3D
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  2D Chart
+                </button>
+                <button
+                  onClick={() => setView3D(true)}
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-all ${
+                    view3D
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Box className="h-3 w-3" />
+                  <span>3D WebGL</span>
+                </button>
+              </div>
+            )}
 
-            <button
-              onClick={() => setIsExpanded(true)}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 transition-colors"
-              title="Expand diagram for detailed examination"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Enlarge</span>
-            </button>
+            {hasVerifiedDiagram && (
+              <button
+                onClick={() => setIsExpanded(true)}
+                className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 transition-colors"
+                title="Expand diagram for detailed examination"
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Enlarge</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Diagram Container */}
         <div className="w-full flex justify-center items-center overflow-x-auto py-1">
           <div className="w-full max-w-3xl min-w-[320px]">
-            {view3D ? (
+            {view3D && hasVerified3D ? (
               <DynamicTask1Chart3D
                 title={title || 'Interactive 3D Data Model'}
                 data={getChartData3D()}

@@ -1,4 +1,60 @@
 import { AdminAnalyticsKPIs, BandDistributionItem, StudentSessionActivity } from '@/types/auth';
+import { AuthService } from './auth-service';
+
+export function getEmptyAdminAnalytics(): {
+  kpis: AdminAnalyticsKPIs;
+  bandDistribution: BandDistributionItem[];
+  recentSessions: StudentSessionActivity[];
+} {
+  return {
+    kpis: {
+      totalSubmissions: 0,
+      activeSessions: 0,
+      averageBandAchieved: 0,
+      aiApiTokenCount: 0,
+    },
+    bandDistribution: [],
+    recentSessions: [],
+  };
+}
+
+/**
+ * Fetches live analytics from the backend API without falling back to fake demo numbers.
+ */
+export async function fetchAdminDashboardData(): Promise<{
+  kpis: AdminAnalyticsKPIs;
+  bandDistribution: BandDistributionItem[];
+  recentSessions: StudentSessionActivity[];
+  error?: string;
+}> {
+  const token = AuthService.getAdminToken();
+
+  try {
+    const res = await fetch('/api/admin/analytics', {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success && data.kpis) {
+      return {
+        kpis: data.kpis,
+        bandDistribution: Array.isArray(data.bandDistribution) ? data.bandDistribution : [],
+        recentSessions: Array.isArray(data.recentSessions) ? data.recentSessions : [],
+      };
+    }
+
+    return {
+      ...getEmptyAdminAnalytics(),
+      error: data?.error || `Failed to load analytics (HTTP ${res.status}).`,
+    };
+  } catch {
+    return {
+      ...getEmptyAdminAnalytics(),
+      error: 'Network error while fetching live platform analytics.',
+    };
+  }
+}
 
 export function getAdminAnalyticsKPIs(): AdminAnalyticsKPIs {
   return {
