@@ -1,4 +1,4 @@
-import { createClient, Client } from '@libsql/client';
+import { createClient, Client } from '@libsql/client/web';
 
 const tursoUrl = process.env.TURSO_DATABASE_URL || '';
 const tursoAuthToken = process.env.TURSO_AUTH_TOKEN || '';
